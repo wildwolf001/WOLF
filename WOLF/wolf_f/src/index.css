@@ -1,0 +1,219 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* VSCode-style global styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  background-color: #1e1e1e;
+  color: #cccccc;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4f4f4f;
+}
+
+/* Focus styles */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 1px solid #007acc;
+  outline-offset: -1px;
+}
+
+/* VSCode-style button */
+.btn {
+  @apply px-3 py-1.5 text-xs rounded-sm border border-transparent transition-colors;
+  background-color: #0e639c;
+  color: #ffffff;
+}
+
+.btn:hover {
+  background-color: #1177bb;
+}
+
+.btn:active {
+  background-color: #0d5a8c;
+}
+
+.btn-secondary {
+  @apply btn;
+  background-color: #3c3c3c;
+  border-color: #454545;
+}
+
+.btn-secondary:hover {
+  background-color: #4c4c4c;
+}
+
+.btn-secondary:active {
+  background-color: #3c3c3c;
+}
+
+/* VSCode-style input */
+.input {
+  @apply px-2 py-1 text-xs rounded-sm border;
+  background-color: #3c3c3c;
+  border-color: #454545;
+  color: #cccccc;
+}
+
+.input:focus {
+  border-color: #007acc;
+}
+
+.input::placeholder {
+  color: #6e6e6e;
+}
+
+/* VSCode-style panel */
+.panel {
+  @apply rounded-none border-none;
+  background-color: #252526;
+}
+
+.panel-header {
+  @apply px-3 py-2 text-xs font-medium flex items-center;
+  background-color: #2d2d2d;
+  border-bottom: 1px solid #404040;
+}
+
+/* VSCode-style tab */
+.tab {
+  @apply px-4 py-2 text-xs transition-colors;
+  color: #969696;
+  background-color: #2d2d2d;
+  border-right: 1px solid #404040;
+}
+
+.tab:hover {
+  color: #cccccc;
+  background-color: #252526;
+}
+
+.tab.active {
+  color: #ffffff;
+  background-color: #1e1e1e;
+  border-top: 1px solid #007acc;
+}
+
+/* Agent status indicator */
+.status-dot {
+  @apply w-2 h-2 rounded-full;
+}
+
+.status-dot.idle {
+  @apply bg-agent-idle;
+}
+
+.status-dot.working {
+  @apply bg-agent-working;
+  animation: pulse 1.5s infinite;
+}
+
+.status-dot.error {
+  @apply bg-agent-error;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Terminal-style text */
+.terminal-text {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Markdown content styling */
+.markdown-content {
+  @apply text-sm leading-relaxed;
+}
+
+.markdown-content h1 {
+  @apply text-xl font-semibold mb-3 text-vscode-yellow;
+}
+
+.markdown-content h2 {
+  @apply text-lg font-medium mb-2 text-vscode-yellow;
+}
+
+.markdown-content h3 {
+  @apply text-base font-medium mb-1 text-vscode-blue;
+}
+
+.markdown-content code {
+  @apply px-1 py-0.5 rounded text-xs;
+  background-color: #3c3c3c;
+  font-family: Consolas, 'Courier New', monospace;
+}
+
+.markdown-content pre {
+  @apply p-3 rounded overflow-x-auto my-2;
+  background-color: #1e1e1e;
+  border: 1px solid #404040;
+}
+
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.markdown-content ul, .markdown-content ol {
+  @apply pl-5 my-1;
+}
+
+.markdown-content li {
+  @apply my-0.5;
+}
+
+.markdown-content strong {
+  @apply font-semibold text-vscode-blue;
+}
+
+.markdown-content table {
+  @apply w-full border-collapse my-2;
+}
+
+.markdown-content th, .markdown-content td {
+  @apply px-2 py-1 border border-vscode-border;
+  text-align: left;
+}
+
+.markdown-content th {
+  @apply bg-vscode-bg-lighter;
+}

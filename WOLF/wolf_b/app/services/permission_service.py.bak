@@ -1,0 +1,949 @@
+"""
+文件权限服务 - 类似于 Claude Code 的权限系统
+防止路径遍历攻击，支持 allowed/denied 目录配置
+"""
+import os
+import re
+from pathlib import Path
+from typing import Optional, List, Set, Dict
+from dataclasses import dataclass, field
+from enum import Enum
+from app.models.permission import PermissionAction
+from app.services.permission_context import ToolPermissionContext, AdditionalWorkingDirectory, PermissionMode, get_empty_permission_context
+
+
+@dataclass
+class FilePermissionRule:
+    """权限规则"""
+    pattern: str  # glob pattern, e.g., "/home/user/**" or "*.txt"
+    action: PermissionAction
+    allow: bool  # True = allow, False = deny
+
+
+@dataclass
+class WorkingDirectory:
+    """工作目录条目（参考 cc 的 PermissionUpdateDestination）"""
+    path: str
+    source: str  # "originalCwd", "additionalWorkingDirectories", "cliArg", "userSettings", "session"
+
+
+class PermissionUpdateType(str, Enum):
+    """权限更新类型（参考 cc 的 PermissionUpdate）"""
+    ADD_DIRECTORIES = "addDirectories"
+    ADD_RULES = "addRules"
+    SET_MODE = "setMode"
+
+
+class PermissionUpdateDestination(str, Enum):
+    """权限更新目标（参考 cc 的 PermissionUpdateDestination）"""
+    USER_SETTINGS = "userSettings"      # ~/.claude/settings.json
+    PROJECT_SETTINGS = "projectSettings"  # .claude/settings.json
+    LOCAL_SETTINGS = "localSettings"    # .claude/settings.local.json
+    SESSION = "session"                # 内存中, 不持久化
+    CLI_ARG = "cliArg"                  # CLI 参数
+
+
+@dataclass
+class PermissionUpdate:
+    """权限更新请求（参考 cc 的 PermissionUpdate）"""
+    type: PermissionUpdateType
+    destination: PermissionUpdateDestination
+    directories: List[str] = field(default_factory=list)
+    rules: List[dict] = field(default_factory=list)
+    mode: Optional[str] = None
+
+
+@dataclass
+class PermissionSuggestion:
+    """权限建议（当路径不在工作目录内时生成）"""
+    type: str  # "addDirectories", "enableMode", "addRule"
+    message: str
+    directories: List[str] = field(default_factory=list)
+    destination: PermissionUpdateDestination = PermissionUpdateDestination.SESSION
+
+
+class FilePermissionService:
+    """
+    文件访问权限服务（参考 Claude Code 的权限系统）
+
+    功能：
+    1. 防止路径遍历攻击（验证路径不能逃逸到 allowed 目录外）
+    2. 支持额外工作目录（additionalWorkingDirectories）
+    3. 支持 glob pattern 匹配
+    4. 支持 allow/deny 规则
+    5. 默认拒绝未明确允许的路径
+    6. 支持动态添加目录和权限更新
+    """
+
+    def __init__(self):
+        self.rules: List[FilePermissionRule] = []
+        self.allowed_base_paths: Set[str] = set()
+        self.denied_paths: Set[str] = set()
+        # 参考 cc 的 additionalWorkingDirectories
+        self.additional_working_directories: Dict[str, WorkingDirectory] = {}
+        # 原始工作目录
+        self._original_cwd: Optional[str] = None
+
+    def set_original_cwd(self, cwd: str):
+        """设置原始工作目录（CLI 启动时的目录）"""
+        self._original_cwd = os.path.abspath(cwd)
+        if self._original_cwd not in self.allowed_base_paths:
+            self.allowed_base_paths.add(self._original_cwd)
+
+    def get_all_working_directories(self) -> List[str]:
+        """获取所有工作目录（包括原始 CWD 和额外的）"""
+        dirs = []
+        if self._original_cwd:
+            dirs.append(self._original_cwd)
+        dirs.extend(self.additional_working_directories.keys())
+        dirs.extend(self.allowed_base_paths)
+        return dirs
+
+    def sync_from_runtime_config(self):
+        """从 runtime_config 同步工作目录 - 参照 cc 的设计"""
+        try:
+            from app.core.runtime_config import runtime_config
+            # 清空并重新添加
+            self.additional_working_directories.clear()
+            for path, source in runtime_config.additional_working_directories.items():
+                self.additional_working_directories[path] = WorkingDirectory(
+                    path=path,
+                    source=source
+                )
+        except Exception:
+            pass
+
+    def get_permission_context(self) -> ToolPermissionContext:
+        """
+        获取权限上下文 - 参照 cc 的 ToolPermissionContext
+        用于工具执行时的权限检查
+        """
+        context = get_empty_permission_context()
+
+        # 设置模式
+        # 从 interactive_permission_service 获取模式
+        try:
+            from app.services.permission_service import interactive_permission_service
+            mode = interactive_permission_service.get_mode()
+            context.mode = PermissionMode(mode.value if hasattr(mode, 'value') else str(mode))
+        except Exception:
+            context.mode = PermissionMode.DEFAULT
+
+        # 添加工作目录
+        if self._original_cwd:
+            context.add_working_directory(self._original_cwd, "originalCwd")
+
+        for path, wd in self.additional_working_directories.items():
+            context.add_working_directory(path, wd.source)
+
+        # 添加 allowed_base_paths
+        for base_path in self.allowed_base_paths:
+            if base_path not in context.additional_working_directories:
+                context.add_working_directory(base_path, "allowedBasePath")
+
+        return context
+
+    def all_working_directories(self) -> Set[str]:
+        """
+        获取所有工作目录的集合 - 参照 cc 的 allWorkingDirectories
+        """
+        dirs = set()
+        if self._original_cwd:
+            dirs.add(self._original_cwd)
+        dirs.update(self.additional_working_directories.keys())
+        return dirs
+
+    def add_working_directory(self, path: str, source: str = "session") -> bool:
+        """
+        添加额外的工作目录（参考 cc 的 addDirectories）
+
+        Args:
+            path: 要添加的目录路径
+            source: 来源标识（session, cliArg, userSettings 等）
+
+        Returns:
+            True = 添加成功，False = 添加失败
+        """
+        if not path:
+            return False
+
+        abs_path = os.path.abspath(path)
+        normalized = self._normalize_path(abs_path)
+
+        # 检查目录是否存在
+        if os.path.exists(normalized):
+            if not os.path.isdir(normalized):
+                return False  # 存在但不是目录
+
+        # 检查是否已经在任何工作目录的子目录内
+        for wd in self.get_all_working_directories():
+            if self.check_path_traversal(normalized, wd):
+                # 已经在某个工作目录内，不需要重复添加
+                return True
+
+        # 添加到额外工作目录
+        self.additional_working_directories[normalized] = WorkingDirectory(
+            path=normalized,
+            source=source
+        )
+
+        return True
+
+    def remove_working_directory(self, path: str) -> bool:
+        """移除额外的工作目录"""
+        if not path:
+            return False
+
+        normalized = os.path.abspath(path)
+        if normalized in self.additional_working_directories:
+            del self.additional_working_directories[normalized]
+            return True
+        return False
+
+    def path_in_allowed_working_path(self, path: str) -> bool:
+        """
+        检查路径是否可访问 - cc-haha 模式：路径存在即可访问
+
+        不再依赖"工作目录"概念。只要路径存在或父目录存在，就允许访问。
+        """
+        if not path:
+            return False
+
+        normalized = self._normalize_path(path)
+
+        # cc-haha 模式：只要路径存在（或父目录存在）就允许访问
+        if os.path.exists(normalized):
+            return True
+
+        # 父目录存在，自动添加并允许
+        parent = os.path.dirname(normalized)
+        if os.path.exists(parent):
+            # 自动添加到工作目录（如果尚未添加）
+            if parent not in self.additional_working_directories:
+                self.add_working_directory(parent, "auto_added")
+            return True
+
+        # 尝试符号链接解析
+        try:
+            real_path = os.path.realpath(normalized)
+            if os.path.exists(real_path):
+                return True
+        except Exception:
+            pass
+
+        return False
+
+    def path_in_working_path_set(self, path: str) -> bool:
+        """
+        检查路径是否在任何允许的工作目录内 - 参照 cc 的 pathInAllowedWorkingPath
+
+        使用路径集合检查，而不是单个路径检查
+        """
+        if not path:
+            return False
+
+        # 获取所有工作目录
+        working_paths = self.all_working_directories()
+
+        # 解析输入路径（包括符号链接解析）
+        resolved_paths = self._resolve_paths(path)
+
+        # 检查所有解析后的路径是否都在工作目录内
+        return all(
+            any(self._path_in_working_path(rp, wp) for wp in working_paths)
+            for rp in resolved_paths
+        )
+
+    def _resolve_paths(self, path: str) -> List[str]:
+        """解析路径（处理符号链接等）"""
+        results = [path]
+
+        try:
+            real = os.path.realpath(path)
+            if real != path:
+                results.append(real)
+        except Exception:
+            pass
+
+        return results
+
+    def _path_in_working_path(self, path: str, working_path: str) -> bool:
+        """检查路径是否在特定工作目录内 - 参照 cc 的 pathInWorkingPath"""
+        if not path or not working_path:
+            return False
+
+        # 路径等于工作目录
+        if path == working_path:
+            return True
+
+        # 路径在工作目录的子目录下
+        normalized_path = os.path.normpath(path)
+        normalized_wp = os.path.normpath(working_path)
+
+        return normalized_path.startswith(normalized_wp + os.sep)
+
+    def add_rule(self, pattern: str, action: PermissionAction = PermissionAction.READ, allow: bool = True):
+        """添加权限规则"""
+        self.rules.append(FilePermissionRule(pattern=pattern, action=action, allow=allow))
+
+    def set_allowed_base_paths(self, paths: List[str]):
+        """设置允许的基础路径"""
+        valid_paths = set()
+        for p in paths:
+            abs_path = os.path.abspath(p)
+            if os.path.exists(abs_path):
+                valid_paths.add(abs_path)
+            else:
+                # 如果目录不存在，尝试创建
+                try:
+                    os.makedirs(abs_path, exist_ok=True)
+                    valid_paths.add(abs_path)
+                except Exception:
+                    pass
+        self.allowed_base_paths = valid_paths
+
+    def add_allowed_path(self, path: str, source: str = "session") -> bool:
+        """
+        添加单个允许路径（如果不存在则创建）
+        参考 cc 的 addDirectories
+        """
+        abs_path = os.path.abspath(path)
+        if os.path.exists(abs_path):
+            if os.path.isdir(abs_path):
+                self.allowed_base_paths.add(abs_path)
+            else:
+                # 文件路径，添加父目录
+                self.allowed_base_paths.add(os.path.dirname(abs_path))
+            return True
+        else:
+            # 尝试创建目录
+            try:
+                os.makedirs(abs_path, exist_ok=True)
+                self.allowed_base_paths.add(abs_path)
+                return True
+            except Exception:
+                pass
+        return False
+
+    def add_denied_path(self, path: str):
+        """添加拒绝路径"""
+        self.denied_paths.add(os.path.abspath(path))
+
+    def _normalize_path(self, path: str) -> str:
+        """规范化路径，处理 .. 和符号链接
+
+        对于 Windows 驱动器路径（如 E:\），不调用 os.path.abspath()，
+        因为 abspath() 会错误处理控制字符（如 BEL 0x07），将其当作路径遍历命令
+        """
+        if not path:
+            return path
+
+        # 检查是否是 Windows 驱动器路径
+        is_drive_path = len(path) >= 2 and path[1] == ':' and path[0].isalpha()
+
+        if is_drive_path:
+            # 对于驱动器路径，移除控制字符并规范化分隔符
+            # 不调用 abspath 以避免 BEL 等控制字符被错误解释
+            normalized = ''
+            for c in path:
+                if ord(c) >= 32 or c in '\t\n\r\\/:':
+                    normalized += c
+            # 统一反斜杠
+            normalized = normalized.replace('/', '\\')
+            # 移除尾部反斜杠（除非是驱动器根，如 E:\）
+            if len(normalized) > 3:
+                normalized = normalized.rstrip('\\')
+            return normalized
+
+        # 对于非驱动器路径，使用正常的规范化
+        try:
+            return os.path.realpath(os.path.abspath(path))
+        except Exception:
+            return os.path.abspath(path)
+
+    def _match_pattern(self, pattern: str, path: str) -> bool:
+        """匹配 glob pattern"""
+        # 简单的 glob 匹配实现
+        # 支持 ** (任意目录), * (任意字符), ? (单个字符)
+        regex_pattern = pattern
+        regex_pattern = regex_pattern.replace(".", "\\.")
+        regex_pattern = regex_pattern.replace("**/", "[^/]+/")
+        regex_pattern = regex_pattern.replace("**", ".*")
+        regex_pattern = regex_pattern.replace("*", "[^/]*")
+        regex_pattern = regex_pattern.replace("?", "[^/]")
+        regex_pattern = "^" + regex_pattern + "$"
+        return bool(re.match(regex_pattern, path))
+
+    def check_path_traversal(self, requested_path: str, base_path: str) -> bool:
+        """
+        检查路径是否逃逸到 base_path 之外
+
+        Args:
+            requested_path: 用户请求的路径
+            base_path: 基础路径（允许的根目录）
+
+        Returns:
+            True = 安全，路径在 base_path 内
+            False = 危险，路径逃逸到 base_path 外
+        """
+        normalized_requested = self._normalize_path(requested_path)
+        normalized_base = self._normalize_path(base_path)
+
+        # 检查是否在 base_path 下
+        return normalized_requested.startswith(normalized_base + os.sep) or normalized_requested == normalized_base
+
+    def check_permission(
+        self,
+        path: str,
+        action: PermissionAction = PermissionAction.READ
+    ) -> tuple[bool, str]:
+        """
+        检查权限 - cc-haha 模式：路径存在即可访问
+
+        Returns:
+            (has_permission, reason)
+        """
+        if not path:
+            return False, "Empty path"
+
+        normalized_path = self._normalize_path(path)
+
+        # cc-haha 模式：只要路径存在就允许
+        if os.path.exists(normalized_path):
+            return True, "Allowed (path exists)"
+
+        # 路径不存在，尝试父目录
+        parent_dir = os.path.dirname(normalized_path)
+        if os.path.exists(parent_dir):
+            # 自动添加父目录到工作目录
+            self.add_working_directory(parent_dir, "auto_added")
+            return True, "Allowed (parent directory accessible)"
+
+        # 检查符号链接
+        try:
+            real_path = os.path.realpath(normalized_path)
+            if os.path.exists(real_path):
+                return True, "Allowed (symbolic link resolved)"
+        except Exception:
+            pass
+
+        return False, f"Path '{path}' does not exist"
+
+    def generate_suggestions(self, path: str, action: str = "read") -> List[PermissionSuggestion]:
+        """
+        当路径不在工作目录内时，生成权限建议（参考 cc 的 generateSuggestions）
+
+        Args:
+            path: 访问的路径
+            action: 操作类型 "read" 或 "write"
+
+        Returns:
+            建议列表
+        """
+        suggestions = []
+        normalized = self._normalize_path(path)
+
+        if not self.path_in_allowed_working_path(normalized):
+            # 参考 cc-haha: 检查原始路径和符号链接解析后的路径
+            paths_to_check = {normalized}
+            try:
+                real_path = os.path.realpath(normalized)
+                if real_path != normalized:
+                    paths_to_check.add(real_path)
+            except Exception:
+                pass
+
+            for p in paths_to_check:
+                parent_dir = os.path.dirname(p)
+                if os.path.exists(parent_dir):
+                    # 建议添加父目录
+                    suggestions.append(PermissionSuggestion(
+                        type="addDirectories",
+                        message=f"Add directory '{parent_dir}' to working directories to allow {action}",
+                        directories=[parent_dir],
+                        destination=PermissionUpdateDestination.SESSION
+                    ))
+                    break  # 只需要一个建议
+
+            # 如果是写操作，建议启用 acceptEdits 模式
+            if action == "write":
+                suggestions.append(PermissionSuggestion(
+                    type="enableMode",
+                    message="Enable acceptEdits mode to allow writes outside current directory",
+                    directories=[],
+                    destination=PermissionUpdateDestination.SESSION
+                ))
+
+        return suggestions
+
+    def apply_permission_update(self, update: PermissionUpdate) -> bool:
+        """
+        应用权限更新（参考 cc 的 applyPermissionUpdate）
+
+        Args:
+            update: 权限更新请求
+
+        Returns:
+            True = 成功，False = 失败
+        """
+        if update.type == PermissionUpdateType.ADD_DIRECTORIES:
+            for directory in update.directories:
+                if update.destination == PermissionUpdateDestination.SESSION:
+                    self.add_working_directory(directory, "session")
+                else:
+                    self.add_working_directory(directory, update.destination.value)
+            return True
+
+        elif update.type == PermissionUpdateType.ADD_RULES:
+            for rule_data in update.rules:
+                pattern = rule_data.get("pattern", "*")
+                behavior = rule_data.get("behavior", "allow")
+                action = PermissionAction.READ if rule_data.get("action") == "read" else PermissionAction.WRITE
+                self.add_rule(pattern, action, behavior == "allow")
+            return True
+
+        return False
+
+    def validate_path(self, path: str) -> tuple[bool, str, str]:
+        """
+        验证路径安全性
+
+        Returns:
+            (is_valid, error_message, normalized_path)
+        """
+        if not path:
+            return False, "Path is empty", ""
+
+        # 检查路径遍历字符
+        if ".." in path or path.startswith("/") and not os.path.isabs(path):
+            return False, "Invalid path characters detected", ""
+
+        # 规范化路径
+        normalized = self._normalize_path(path)
+
+        # 检查权限
+        has_permission, reason = self.check_permission(normalized)
+        if not has_permission:
+            return False, reason, ""
+
+        return True, "", normalized
+
+    def list_allowed_directories(self) -> List[dict]:
+        """列出所有允许访问的目录"""
+        result = []
+        for base_path in self.allowed_base_paths:
+            exists = os.path.exists(base_path)
+            is_dir = os.path.isdir(base_path) if exists else False
+            result.append({
+                "path": base_path,
+                "exists": exists,
+                "is_directory": is_dir,
+                "writable": os.access(base_path, os.W_OK) if exists else False
+            })
+        # 添加额外的工作目录
+        for wd_path, wd_info in self.additional_working_directories.items():
+            if wd_path not in self.allowed_base_paths:
+                exists = os.path.exists(wd_path)
+                result.append({
+                    "path": wd_path,
+                    "source": wd_info.source,
+                    "exists": exists,
+                    "is_directory": os.path.isdir(wd_path) if exists else False,
+                    "writable": os.access(wd_path, os.W_OK) if exists else False
+                })
+        return result
+
+    def check_and_add_path(self, path: str) -> bool:
+        """
+        检查路径并在需要时自动添加父目录（智能路径处理）
+
+        Args:
+            path: 要检查的路径
+
+        Returns:
+            True = 路径已添加或已存在，False = 无法处理
+        """
+        if not path:
+            return False
+
+        # 如果路径是 Windows 驱动器路径（如 E:\ 或 E:），不要调用 os.path.abspath()
+        # 因为 abspath() 会错误处理控制字符（如 BEL 0x07），将其当作路径遍历命令
+        # 直接使用 path 作为基础
+        is_drive_path = len(path) >= 2 and path[1] == ':'
+
+        if is_drive_path:
+            # 对于驱动器路径，只做基本规范化，不调用 abspath
+            # 移除控制字符
+            normalized = ''
+            for c in path:
+                if ord(c) >= 32 or c in '\t\n\r\\/:':
+                    normalized += c
+            normalized = normalized.rstrip('\\/:')
+        else:
+            normalized = os.path.abspath(path)
+            normalized = self._normalize_path(normalized)
+
+        # 如果路径存在，直接添加父目录
+        if os.path.exists(normalized):
+            if os.path.isfile(normalized):
+                # 使用 add_working_directory 因为 path_in_allowed_working_path 检查的是 additional_working_directories
+                self.add_working_directory(os.path.dirname(normalized), "auto_added")
+            else:
+                self.add_working_directory(normalized, "auto_added")
+            return True
+
+        # 路径不存在，尝试添加父目录
+        parent = os.path.dirname(normalized)
+        if os.path.exists(parent):
+            # 使用 add_working_directory 而非 add_allowed_path
+            # 因为 path_in_allowed_working_path 检查的是 additional_working_directories
+            self.add_working_directory(parent, "auto_added")
+            return True
+
+        # 父目录也不存在，尝试创建
+        try:
+            os.makedirs(parent, exist_ok=True)
+            self.add_working_directory(parent, "auto_added")
+            return True
+        except Exception:
+            pass
+
+        return False
+
+
+# 全局权限服务实例
+permission_service = FilePermissionService()
+
+
+def init_permission_service():
+    """初始化权限服务，添加默认规则"""
+    # 从配置加载允许的路径
+    from app.core.config import settings
+    from app.core.runtime_config import runtime_config
+    import os
+
+    # 设置原始工作目录为当前进程工作目录
+    permission_service.set_original_cwd(os.getcwd())
+
+    # 从 runtime_config 同步工作目录
+    permission_service.sync_from_runtime_config()
+
+    # 添加本地存储路径为允许的基础路径
+    allowed_paths = [
+        settings.LOCAL_STORAGE_PATH,
+        settings.KNOWLEDGE_BASE_PATH,
+        settings.SESSIONS_PATH,
+        settings.UPLOAD_PATH,
+    ]
+
+    # 添加工作目录（从 additional_working_directories）
+    for path in runtime_config.additional_working_directories.keys():
+        if os.path.exists(path):
+            allowed_paths.append(path)
+
+    # 收集所有存在且有效的路径
+    valid_paths = []
+    for path in allowed_paths:
+        abs_path = os.path.abspath(path)
+        if os.path.exists(abs_path):
+            valid_paths.append(abs_path)
+        else:
+            # 如果目录不存在，先创建
+            try:
+                os.makedirs(abs_path, exist_ok=True)
+                valid_paths.append(abs_path)
+            except Exception:
+                pass
+
+    # 一次性设置所有允许的路径
+    if valid_paths:
+        permission_service.set_allowed_base_paths(valid_paths)
+
+    # 默认允许读取 .md, .txt, .pdf, .py, .json 等文本文件
+    text_extensions = [".md", ".txt", ".py", ".js", ".ts", ".jsx", ".tsx", ".json", ".yaml", ".yml", ".xml", ".html", ".css"]
+    for ext in text_extensions:
+        permission_service.add_rule(f"*{ext}", PermissionAction.READ, allow=True)
+
+    return permission_service
+
+
+def get_permission_service() -> FilePermissionService:
+    """获取权限服务实例"""
+    return permission_service
+
+
+# =============================================================================
+# 拒绝追踪器 - 参考 cc-haha 的 denialTracking
+# =============================================================================
+
+class DenialTracker:
+    """
+    追踪权限拒绝次数，防止无限重试
+
+    参考 cc-haha 的 DENIAL_LIMITS:
+    - max_consecutive: 连续拒绝次数上限
+    - max_total: 总拒绝次数上限
+    """
+
+    def __init__(self):
+        self.consecutive_denials = 0
+        self.total_denials = 0
+        self.max_consecutive = 3
+        self.max_total = 20
+
+    def record_denial(self):
+        """记录一次拒绝"""
+        self.consecutive_denials += 1
+        self.total_denials += 1
+
+    def record_success(self):
+        """记录一次成功，重置连续拒绝计数"""
+        self.consecutive_denials = 0
+
+    def should_fallback(self) -> bool:
+        """是否应该回退到用户提示"""
+        return (self.consecutive_denials >= self.max_consecutive or
+                self.total_denials >= self.max_total)
+
+    def get_state(self) -> dict:
+        """获取当前状态"""
+        return {
+            "consecutive_denials": self.consecutive_denials,
+            "total_denials": self.total_denials,
+            "max_consecutive": self.max_consecutive,
+            "max_total": self.max_total,
+            "should_fallback": self.should_fallback()
+        }
+
+    def reset(self):
+        """重置追踪器"""
+        self.consecutive_denials = 0
+        self.total_denials = 0
+
+
+# 全局拒绝追踪器
+denial_tracker = DenialTracker()
+
+
+def get_denial_tracker() -> DenialTracker:
+    """获取拒绝追踪器实例"""
+    return denial_tracker
+
+
+# =============================================================================
+# 交互式权限服务 - 参考 Claude Code 的权限系统
+# =============================================================================
+
+import asyncio
+import uuid
+from typing import Dict, Optional
+from app.core.permission_mode import PermissionMode, RiskLevel
+from app.models.permission import PermissionRequest, PermissionResponse, PermissionRule, PermissionResult
+
+
+class InteractivePermissionService:
+    """
+    可交互的权限服务 - 参考 Claude Code 的 PermissionPrompt
+
+    核心变化：当权限不足时，不直接拒绝，而是向用户发起请求
+
+    Attributes:
+        mode: 当前权限模式
+        always_allowed_rules: 始终允许的规则
+        always_denied_rules: 始终拒绝的规则
+    """
+
+    def __init__(self):
+        self.mode: PermissionMode = PermissionMode.DEFAULT
+        self.always_allowed_rules: list = []
+        self.always_denied_rules: list = []
+        self._pending_requests: Dict[str, PermissionRequest] = {}
+
+    def set_mode(self, mode: PermissionMode):
+        """设置权限模式"""
+        self.mode = mode
+
+    def get_mode(self) -> PermissionMode:
+        """获取当前权限模式"""
+        return self.mode
+
+    async def request_permission(
+        self,
+        tool_name: str,
+        request_type: str,
+        description: str,
+        path: Optional[str] = None,
+        command: Optional[str] = None,
+        risk_level: str = "MEDIUM",
+        session_id: Optional[str] = None
+    ) -> tuple[bool, str]:
+        """
+        请求权限 - 核心方法
+
+        Returns:
+            (is_allowed, reason)
+            - 如果 mode 是 bypass/acceptEdits: 直接返回 (True, "Allowed by mode")
+            - 如果 mode 是 dontAsk: 直接返回 (False, "Denied by mode")
+            - 如果 mode 是 plan: 返回 (False, "Plan mode - no execution")
+            - 如果 mode 是 default: 创建请求并等待用户响应
+        """
+        # 1. 根据模式快速判断
+        if self.mode == PermissionMode.BYPASS:
+            return True, "Allowed (bypass mode)"
+        elif self.mode == PermissionMode.ACCEPT_EDITS:
+            return True, "Allowed (accept edits mode)"
+        elif self.mode == PermissionMode.DONT_ASK:
+            return False, "Denied (dont ask mode)"
+        elif self.mode == PermissionMode.PLAN:
+            return False, "Plan mode - no execution"
+
+        # 2. 检查规则
+        rule_check = self._check_rules(tool_name, path)
+        if rule_check is not None:
+            return rule_check
+
+        # 3. 尝试自动添加路径（如果路径不存在）
+        if path:
+            from app.services.permission_service import permission_service
+            if permission_service.check_and_add_path(path):
+                return True, "Allowed (auto-added path)"
+
+        # 4. 创建权限请求
+        request = PermissionRequest(
+            request_id=str(uuid.uuid4()),
+            tool_name=tool_name,
+            request_type=request_type,
+            description=description,
+            path=path,
+            command=command,
+            risk_level=risk_level
+        )
+        request.options = request.create_default_options()
+
+        # 5. 存储请求
+        self._pending_requests[request.request_id] = request
+
+        # 6. 发送到前端
+        try:
+            from app.ws.connection_manager import ws_manager
+            await ws_manager.send_permission_request(
+                request_id=request.request_id,
+                tool_name=tool_name,
+                description=description,
+                path=path,
+                command=command,
+                risk_level=risk_level,
+                session_id=session_id
+            )
+        except Exception as e:
+            # 如果无法发送请求，默认拒绝
+            return False, f"Failed to send permission request: {e}"
+
+        # 7. 等待用户响应
+        try:
+            from app.ws.connection_manager import ws_manager
+            response = await ws_manager.wait_for_permission_response(
+                request.request_id,
+                timeout=300.0  # 5分钟超时
+            )
+
+            if response is None:
+                return False, "Permission request timeout"
+
+            action = response.get("action", "deny")
+
+            if action in ("allow", "allow_always"):
+                # 如果选择"始终允许"，添加规则
+                if action == "allow_always":
+                    self.add_always_allow_rule(tool_name, path)
+                return True, "Allowed by user"
+            else:
+                # 如果选择"始终拒绝"，添加规则
+                if action == "deny_always":
+                    self.add_always_deny_rule(tool_name, path)
+                return False, "Denied by user"
+
+        except Exception as e:
+            return False, f"Permission request failed: {e}"
+        finally:
+            self._pending_requests.pop(request.request_id, None)
+
+    def _check_rules(self, tool_name: str, path: Optional[str]) -> Optional[tuple[bool, str]]:
+        """检查是否有匹配的规则"""
+        # 检查始终拒绝规则
+        for rule in self.always_denied_rules:
+            if rule.matches(tool_name, path):
+                return False, f"Denied by rule: {rule.tool_name}"
+
+        # 检查始终允许规则
+        for rule in self.always_allowed_rules:
+            if rule.matches(tool_name, path):
+                return True, f"Allowed by rule: {rule.tool_name}"
+
+        return None  # 没有匹配的规则，需要进一步处理
+
+    def add_always_allow_rule(self, tool_name: str, path: Optional[str] = None):
+        """添加始终允许的规则"""
+        rule = PermissionRule(
+            tool_name=tool_name,
+            behavior="allow",
+            source="session",
+            pattern=path,
+            persistent=False
+        )
+        self.always_allowed_rules.append(rule)
+
+    def add_always_deny_rule(self, tool_name: str, path: Optional[str] = None):
+        """添加始终拒绝的规则"""
+        rule = PermissionRule(
+            tool_name=tool_name,
+            behavior="deny",
+            source="session",
+            pattern=path,
+            persistent=False
+        )
+        self.always_denied_rules.append(rule)
+
+    def get_pending_requests(self) -> list:
+        """获取所有待处理的权限请求"""
+        return list(self._pending_requests.values())
+
+    def clear_rules(self):
+        """清除所有会话规则"""
+        self.always_allowed_rules.clear()
+        self.always_denied_rules.clear()
+
+
+# 全局交互式权限服务实例
+interactive_permission_service = InteractivePermissionService()
+
+
+def get_interactive_permission_service() -> InteractivePermissionService:
+    """获取交互式权限服务实例"""
+    return interactive_permission_service
+
+
+async def request_permission(
+    tool_name: str,
+    request_type: str,
+    description: str,
+    path: Optional[str] = None,
+    command: Optional[str] = None,
+    risk_level: str = "MEDIUM",
+    session_id: Optional[str] = None
+) -> tuple[bool, str]:
+    """
+    快捷函数：请求权限
+
+    这是最常用的权限请求接口
+    """
+    service = get_interactive_permission_service()
+    return await service.request_permission(
+        tool_name=tool_name,
+        request_type=request_type,
+        description=description,
+        path=path,
+        command=command,
+        risk_level=risk_level,
+        session_id=session_id
+    )

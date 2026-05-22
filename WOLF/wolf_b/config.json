@@ -1,0 +1,47 @@
+{
+  "current_provider": "minimax",
+  "providers": {
+    "minimax": {
+      "api_key": "sk-cp-K6evLVWAR7lRaK6n7nUOoQ8c_3koEGdg5uiXuAKdvfHwO83TBZ59gjjuDmnKFOmZA28NvYx7CaprQzcbmuS41yzEsnAOFNFYhS_3NhVu22fMMdBdoEH9Bmc",
+      "group_id": null,
+      "model": "MiniMax-M2.7"
+    },
+    "deepseek": {
+      "api_key": null,
+      "group_id": null,
+      "model": "deepseek-chat"
+    },
+    "qwen": {
+      "api_key": null,
+      "group_id": null,
+      "model": "qwen-turbo"
+    },
+    "openai": {
+      "api_key": null,
+      "group_id": null,
+      "model": "gpt-4o"
+    },
+    "anthropic": {
+      "api_key": null,
+      "group_id": null,
+      "model": "claude-3-5-sonnet-20241022"
+    },
+    "zhipu": {
+      "api_key": null,
+      "group_id": null,
+      "model": "glm-4"
+    },
+    "moonshot": {
+      "api_key": null,
+      "group_id": null,
+      "model": "moonshot-v1-8k"
+    }
+  },
+  "storage_paths": {
+    "local_storage_path": "./wolf_data",
+    "knowledge_base_path": "./wolf_data/knowledge",
+    "sessions_path": "./wolf_data/sessions",
+    "upload_path": "./wolf_data/uploads"
+  },
+  "work_directory": "E:\\AFSIM"
+}

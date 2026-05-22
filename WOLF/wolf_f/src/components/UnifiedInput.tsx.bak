@@ -1,0 +1,675 @@
+import React from 'react';
+import { useSessionStore } from '@/store';
+import { AgentWorkflow } from '@/components/AgentWorkflow';
+import clsx from 'clsx';
+import ReactMarkdown from 'react-markdown';
+
+interface AgentStatusEvent {
+  agent: string;
+  role: string;
+  status: 'idle' | 'working' | 'analyzing';
+  message: string;
+}
+
+function AgentStatusCard({
+  agent,
+  role,
+  status,
+  lastMessage,
+  onClick
+}: {
+  agent: string;
+  role: string;
+  status: string;
+  lastMessage: string;
+  onClick?: () => void;
+}) {
+  const isWorking = status === 'working' || status === 'analyzing';
+
+  const statusColors: Record<string, string> = {
+    idle: 'bg-agent-idle',
+    working: 'bg-agent-working',
+    analyzing: 'bg-vscode-yellow',
+    error: 'bg-agent-error'
+  };
+
+  const roleIcons: Record<string, string> = {
+    pm: '📋',
+    research: '🔍',
+    ml: '⚙️',
+    developer: '💻',
+    writer: '📝',
+    data: '📊',
+    review: '🔬',
+    devops: '🔧'
+  };
+
+  return (
+    <div
+      className={clsx(
+        'bg-vscode-bg-light border rounded-sm p-3 transition-all cursor-pointer hover:border-vscode-accent',
+        isWorking ? 'border-vscode-accent' : 'border-vscode-border'
+      )}
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-lg">{roleIcons[role] || '🤖'}</span>
+        <div className="flex-1">
+          <div className="text-xs font-medium text-vscode-text">{agent}</div>
+          <div className="text-xs text-vscode-text-dim">{role}</div>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className={clsx('w-2 h-2 rounded-full', statusColors[status] || 'bg-vscode-text-dim', isWorking && 'animate-pulse')}></span>
+          <span className="text-xs text-vscode-text-dim capitalize">{status}</span>
+        </div>
+      </div>
+      {lastMessage && (
+        <div className="text-xs text-vscode-text-dim mt-2 p-2 bg-vscode-bg rounded-sm">
+          {lastMessage}
+        </div>
+      )}
+      <div className="text-xs text-vscode-accent mt-2">Click to view workflow →</div>
+    </div>
+  );
+}
+
+export function UnifiedInput() {
+  const [input, setInput] = React.useState('');
+  const [isProcessing, setIsProcessing] = React.useState(false);
+  const [agentStatuses, setAgentStatuses] = React.useState<Map<string, AgentStatusEvent>>(new Map());
+  const [selectedAgentRole, setSelectedAgentRole] = React.useState<string | null>(null);
+  const [userChoiceOptions, setUserChoiceOptions] = React.useState<any>(null);
+  const [suggestedMemories, setSuggestedMemories] = React.useState<any[]>([]);
+  const [streamingContent, setStreamingContent] = React.useState(''); // For real-time streaming content display
+  const logsEndRef = React.useRef<HTMLDivElement>(null);
+  const chatEndRef = React.useRef<HTMLDivElement>(null);
+  const eventSourceRef = React.useRef<EventSource | null>(null);
+
+  // Use session store for persistence
+  const {
+    sessions,
+    currentSessionId,
+    addSession,
+    setCurrentSession,
+    addMessageToSession,
+    addLogToSession,
+    clearSessionLogs,
+    clearSessionMessages,
+    addTaskResultToSession,
+    setFinalReport,
+    addMemory,
+    getSession
+  } = useSessionStore();
+
+  // Get current session's logs from store
+  const currentSession = currentSessionId ? getSession(currentSessionId) : null;
+  const logs = currentSession?.logs || [];
+  const messages = currentSession?.messages || [];
+
+  // Auto-scroll logs when new entries appear
+  React.useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
+
+  // Auto-scroll chat when streaming content changes
+  React.useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [streamingContent, messages]);
+
+  const handleSubmit = async () => {
+    if (!input.trim() || isProcessing) return;
+
+    const userMessage = input.trim();
+    setInput('');
+    setIsProcessing(true);
+    setSelectedAgentRole(null);
+    setAgentStatuses(new Map());
+    setSuggestedMemories([]);
+
+    // Ensure we have a session
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      const newSession = addSession();
+      setCurrentSession(newSession.id);
+      sessionId = newSession.id;
+    }
+
+    // Add user message to session logs (don't clear old logs - keep history)
+    addLogToSession(sessionId, `User: ${userMessage}`, 'user');
+
+    // Add user message to session messages
+    addMessageToSession(sessionId, {
+      sessionId,
+      agentRole: 'user',
+      content: userMessage,
+      isUser: true,
+    });
+
+    // Close existing EventSource if any
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
+    // Create SSE connection with conversation history (limited to last 5 messages)
+    const encodedMessage = encodeURIComponent(userMessage);
+    const recentMessages = (currentSession?.messages || []).slice(-5);
+    const historyParam = encodeURIComponent(JSON.stringify(recentMessages));
+    const eventSource = new EventSource(`http://localhost:8000/api/stream/stream?user_message=${encodedMessage}&history=${historyParam}`);
+    eventSourceRef.current = eventSource;
+
+    eventSource.addEventListener('start', (e) => {
+      const data = JSON.parse(e.data);
+      if (sessionId) addLogToSession(sessionId, `System: ${data.message}`, 'system');
+    });
+
+    eventSource.addEventListener('agent_status', (e) => {
+      const data: AgentStatusEvent = JSON.parse(e.data);
+      if (sessionId) addLogToSession(sessionId, `${data.agent}: ${data.message}`, 'log');
+
+      setAgentStatuses(prev => {
+        const newMap = new Map(prev);
+        newMap.set(data.role, data);
+        return newMap;
+      });
+
+      // NOTE: Agent status updates are for Activity Log only - do NOT add to chat messages
+      // The chat should only show user-facing responses, not internal status updates
+    });
+
+    eventSource.addEventListener('analysis', (e) => {
+      const data = JSON.parse(e.data);
+      if (sessionId) addLogToSession(sessionId, `Analysis: ${data.message.substring(0, 100)}...`, 'log');
+    });
+
+    // 工具开始事件 - 实时显示工具调用
+    eventSource.addEventListener('tool_start', (e) => {
+      const data = JSON.parse(e.data);
+      const toolName = data.tool || 'unknown';
+      const argsStr = data.args ? JSON.stringify(data.args).substring(0, 100) : '';
+      if (sessionId) addLogToSession(sessionId, `[Tool] ${toolName}(${argsStr})...`, 'log');
+    });
+
+    // 工具结果事件 - 实时显示工具结果
+    eventSource.addEventListener('tool_result', (e) => {
+      const data = JSON.parse(e.data);
+      const toolName = data.tool || 'unknown';
+      const result = data.result || '';
+      // 截断过长的结果
+      const truncatedResult = result.length > 200 ? result.substring(0, 200) + '...' : result;
+      if (sessionId) addLogToSession(sessionId, `[Tool Result] ${toolName}:\n${truncatedResult}`, 'log');
+    });
+
+    // 内容增量事件 - 实时显示 LLM 输出到 Chat 区域
+    eventSource.addEventListener('content_delta', (e) => {
+      const data = JSON.parse(e.data);
+      const delta = data.delta || '';
+      if (delta) {
+        setStreamingContent(prev => prev + delta);
+      }
+    });
+
+    eventSource.addEventListener('task_result', (e) => {
+      const data = JSON.parse(e.data);
+      if (sessionId) {
+        addLogToSession(sessionId, `[Task] ${data.task.title}`, 'log');
+        addTaskResultToSession(sessionId, data.task);
+      }
+    });
+
+    eventSource.addEventListener('final_result', (e) => {
+      const data = JSON.parse(e.data);
+      // Final result goes to chat messages, not Activity Log
+      if (sessionId) {
+        const finalMessage = data.message || '';
+        // Clear streaming content and add final result as a message
+        setStreamingContent('');
+        addMessageToSession(sessionId, {
+          sessionId,
+          agentRole: 'assistant',
+          content: finalMessage,
+          isUser: false,
+        });
+      }
+    });
+
+    eventSource.addEventListener('error', (e: MessageEvent) => {
+      const data = JSON.parse(e.data);
+      // Check if this is a user choice error
+      if (data.type === 'user_choice') {
+        setUserChoiceOptions(data);
+        setIsProcessing(false);
+        eventSource.close();
+        return;
+      }
+      if (sessionId) addLogToSession(sessionId, `ERROR: ${data.message}`, 'error');
+    });
+
+    eventSource.addEventListener('done', (e: MessageEvent) => {
+      const data = JSON.parse(e.data);
+      // Activity Log shows completion
+      if (sessionId) addLogToSession(sessionId, `[Complete] ${data.message}`, 'system');
+      // Clear streaming content since final result is now in messages
+      setStreamingContent('');
+      eventSource.close();
+      setIsProcessing(false);
+    });
+
+    eventSource.addEventListener('final_report', (e: MessageEvent) => {
+      const data = JSON.parse(e.data);
+      if (sessionId && data.report) {
+        setFinalReport(sessionId, data.report);
+        addLogToSession(sessionId, `Final report generated`, 'system');
+        // Trigger memory extraction after final report
+        setTimeout(() => extractMemories(), 500);
+      }
+    });
+
+    eventSource.onerror = () => {
+      if (sessionId) addLogToSession(sessionId, 'Connection error - please try again', 'error');
+      eventSource.close();
+      setIsProcessing(false);
+    };
+  };
+
+  const handleUserChoice = (choiceId: string) => {
+    setUserChoiceOptions(null);
+    const sid = currentSessionId || '';
+
+    switch (choiceId) {
+      case 'retry':
+        // Re-submit the same message
+        handleSubmit();
+        break;
+      case 'simplify':
+        // Clear and let user know to simplify
+        addLogToSession(sid, 'System: 请尝试将您的问题简化后重试，或将其拆分为多个简单问题。', 'system');
+        break;
+      case 'switch':
+        // Could redirect to settings page
+        addLogToSession(sid, 'System: 请前往设置页面切换 AI 提供商后重试。', 'system');
+        break;
+      case 'cancel':
+      default:
+        // Just clear the state
+        break;
+    }
+  };
+
+  // Extract memories from conversation after processing
+  const extractMemories = async () => {
+    if (!currentSessionId || !currentSession) return;
+
+    try {
+      const messages = currentSession.messages.map(m => ({
+        content: m.content,
+        isUser: m.isUser,
+      }));
+      const taskResults = currentSession.taskResults;
+      const finalReport = currentSession.finalReport;
+
+      const response = await fetch('http://localhost:8000/api/process/extract-memories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages,
+          task_results: taskResults,
+          final_report: finalReport,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success && data.memories && data.memories.length > 0) {
+        setSuggestedMemories(data.memories);
+      }
+    } catch (error) {
+      console.error('Failed to extract memories:', error);
+    }
+  };
+
+  const handleSaveSuggestedMemory = (memory: any) => {
+    if (!currentSessionId) return;
+    addMemory(currentSessionId, {
+      name: memory.name,
+      description: memory.description,
+      type: memory.type,
+      content: memory.content,
+      why: memory.why,
+      howToApply: memory.how_to_apply,
+    });
+    setSuggestedMemories(prev => prev.filter(m => m.name !== memory.name));
+    addLogToSession(currentSessionId, `Memory saved: ${memory.name}`, 'system');
+  };
+
+  const handleDismissSuggestedMemories = () => {
+    setSuggestedMemories([]);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  const agentList = Array.from(agentStatuses.values());
+  const workingAgents = agentList.filter(a => a.status === 'working' || a.status === 'analyzing');
+
+  // If an agent is selected, show their workflow view
+  if (selectedAgentRole) {
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden bg-vscode-bg">
+        <div className="px-4 py-2 border-b border-vscode-border bg-vscode-bg-light flex items-center gap-3">
+          <button
+            onClick={() => setSelectedAgentRole(null)}
+            className="text-xs text-vscode-accent hover:underline flex items-center gap-1"
+          >
+            ← Back to Team View
+          </button>
+          <span className="text-xs text-vscode-text-dim">|</span>
+          <span className="text-xs text-vscode-text-dim">
+            Viewing {selectedAgentRole} workflow
+          </span>
+        </div>
+        <AgentWorkflow role={selectedAgentRole} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden bg-vscode-bg">
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-vscode-border bg-vscode-bg-light">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-semibold text-vscode-text mb-1">WOLF AI</h1>
+            <p className="text-xs text-vscode-text-dim">
+              Describe what you need — I'll help you get it done.
+            </p>
+          </div>
+          {/* Session selector */}
+          <div className="flex items-center gap-2">
+            <select
+              value={currentSessionId || ''}
+              onChange={(e) => setCurrentSession(e.target.value || null)}
+              className="bg-vscode-bg border border-vscode-border rounded-sm px-2 py-1 text-xs text-vscode-text"
+            >
+              {sessions.map(session => (
+                <option key={session.id} value={session.id}>
+                  {session.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => {
+                const newSession = addSession();
+                setCurrentSession(newSession.id);
+              }}
+              className="px-2 py-1 text-xs bg-vscode-bg border border-vscode-border rounded-sm hover:bg-vscode-bg-hover"
+            >
+              + New
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content area - Left: Activity Log, Right: Chat */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left panel: Activity Log */}
+        <div className="w-96 border-r border-vscode-border flex flex-col overflow-hidden">
+          <div className="p-3 border-b border-vscode-border bg-vscode-bg-light flex items-center justify-between">
+            <h2 className="text-xs font-medium text-vscode-text uppercase tracking-wide">Activity Log</h2>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-vscode-text-dim">{logs.length} entries</span>
+              <button
+                onClick={() => {
+                  if (currentSessionId) clearSessionLogs(currentSessionId);
+                }}
+                className="text-xs text-vscode-text-dim hover:text-vscode-text"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 bg-vscode-bg">
+            <div className="terminal-text text-xs space-y-1">
+              {logs.map((log) => (
+                <div key={log.id} className={clsx(
+                  'p-1 rounded',
+                  log.type === 'error' ? 'text-vscode-red bg-vscode-red/10' :
+                  log.type === 'user' ? 'text-vscode-blue' :
+                  log.type === 'done' ? 'text-vscode-green' :
+                  log.type === 'system' ? 'text-vscode-yellow' :
+                  'text-vscode-text-dim hover:bg-vscode-bg-light'
+                )}>
+                  [{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]
+                  <span className="ml-1">{log.message}</span>
+                </div>
+              ))}
+              <div ref={logsEndRef} />
+            </div>
+          </div>
+        </div>
+
+        {/* Right panel: Chat */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Chat Header */}
+          <div className="p-3 border-b border-vscode-border bg-vscode-bg-light flex items-center justify-between">
+            <h2 className="text-xs font-medium text-vscode-text uppercase tracking-wide">Chat</h2>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-vscode-text-dim">{messages.length} messages</span>
+              <button
+                onClick={() => {
+                  if (currentSessionId) clearSessionMessages(currentSessionId);
+                }}
+                className="text-xs text-vscode-text-dim hover:text-vscode-text"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          {/* Chat Messages */}
+          <div className="flex-1 overflow-y-auto p-4 bg-vscode-bg">
+            <div className="space-y-4">
+              {messages.map((msg) => (
+                <div key={msg.id} className={clsx(
+                  'flex',
+                  msg.isUser ? 'justify-end' : 'justify-start'
+                )}>
+                  <div className={clsx(
+                    'max-w-[80%] rounded-lg p-3',
+                    msg.isUser
+                      ? 'bg-vscode-accent text-white'
+                      : 'bg-vscode-bg-light border border-vscode-border'
+                  )}>
+                    <div className="text-xs text-vscode-text-dim mb-1 capitalize">{msg.agentRole}</div>
+                    <ReactMarkdown
+                      className="text-sm text-vscode-text whitespace-pre-wrap prose-sm dark:prose-invert max-w-none"
+                      components={{
+                        code({ node, className, children, ...props }) {
+                          const inline = !className;
+                          return inline ? (
+                            <code className="px-1 py-0.5 bg-vscode-bg rounded text-vscode-blue font-mono text-xs" {...props}>
+                              {children}
+                            </code>
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                        pre({ children }) {
+                          return (
+                            <pre className="mt-2 p-3 bg-vscode-bg rounded border border-vscode-border overflow-x-auto font-mono text-xs">
+                              {children}
+                            </pre>
+                          );
+                        },
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              ))}
+
+              {/* Streaming content - shows real-time LLM output */}
+              {streamingContent && (
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] rounded-lg p-3 bg-vscode-bg-light border border-vscode-border">
+                    <div className="text-xs text-vscode-text-dim mb-1">assistant</div>
+                    <ReactMarkdown
+                      className="text-sm text-vscode-text whitespace-pre-wrap prose-sm dark:prose-invert max-w-none"
+                      components={{
+                        code({ node, className, children, ...props }) {
+                          const inline = !className;
+                          return inline ? (
+                            <code className="px-1 py-0.5 bg-vscode-bg rounded text-vscode-blue font-mono text-xs" {...props}>
+                              {children}
+                              </code>
+                            ) : (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                          pre({ children }) {
+                            return (
+                              <pre className="mt-2 p-3 bg-vscode-bg rounded border border-vscode-border overflow-x-auto font-mono text-xs">
+                                {children}
+                              </pre>
+                            );
+                          },
+                        }}
+                      >
+                        {streamingContent}
+                      </ReactMarkdown>
+                      <div className="flex items-center gap-1 mt-2 text-vscode-yellow">
+                        <span className="animate-pulse">●</span>
+                        <span className="text-xs">Thinking...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Processing indicator when no streaming content yet */}
+                {isProcessing && !streamingContent && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] rounded-lg p-3 bg-vscode-bg-light border border-vscode-border">
+                      <div className="flex items-center gap-2 text-vscode-yellow">
+                        <span className="animate-pulse">●</span>
+                        <span className="text-sm">Processing request...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={chatEndRef} />
+              </div>
+            </div>
+          </div>
+
+          {/* User Choice Options - Show when all providers failed */}
+          {userChoiceOptions && (
+            <div className="p-4 bg-vscode-bg-light border-t border-vscode-border">
+              <div className="text-sm text-vscode-text mb-3">{userChoiceOptions.message}</div>
+              <div className="grid grid-cols-2 gap-2">
+                {userChoiceOptions.options?.map((option: any) => (
+                  <button
+                    key={option.id}
+                    onClick={() => handleUserChoice(option.id)}
+                    className="p-3 text-left bg-vscode-bg border border-vscode-border rounded-sm hover:border-vscode-accent transition-colors"
+                  >
+                    <div className="text-sm text-vscode-text font-medium">{option.label}</div>
+                    <div className="text-xs text-vscode-text-dim">{option.description}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Suggested Memories - Show after processing */}
+          {suggestedMemories.length > 0 && (
+            <div className="p-4 bg-vscode-bg-light border-t border-vscode-border">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-vscode-text font-medium">Suggested Memories</span>
+                  <span className="text-xs text-vscode-text-dim">— AI identified important information to remember</span>
+                </div>
+                <button
+                  onClick={handleDismissSuggestedMemories}
+                  className="text-xs text-vscode-text-dim hover:text-vscode-text"
+                >
+                  Dismiss
+                </button>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {suggestedMemories.map((memory, idx) => (
+                  <div key={idx} className="p-3 bg-vscode-bg border border-vscode-border rounded-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={clsx(
+                            'px-1.5 py-0.5 text-xs rounded uppercase',
+                            memory.type === 'user' && 'bg-vscode-blue/20 text-vscode-blue',
+                            memory.type === 'feedback' && 'bg-vscode-yellow/20 text-vscode-yellow',
+                            memory.type === 'project' && 'bg-vscode-green/20 text-vscode-green',
+                            memory.type === 'reference' && 'bg-purple-500/20 text-purple-400'
+                          )}>
+                            {memory.type}
+                          </span>
+                          <span className="text-sm text-vscode-text font-medium truncate">{memory.name}</span>
+                        </div>
+                        <div className="text-xs text-vscode-text-dim line-clamp-2">{memory.description}</div>
+                        {memory.why && (
+                          <div className="text-xs text-vscode-text-dim mt-1 italic">Why: {memory.why}</div>
+                        )}
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleSaveSuggestedMemory(memory)}
+                          className="px-2 py-1 text-xs bg-vscode-accent/20 text-vscode-accent border border-vscode-accent/30 rounded-sm hover:bg-vscode-accent/30"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Input area */}
+          <div className="p-4 bg-vscode-bg-light border-t border-vscode-border">
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Describe what you need... (Enter to send, Shift+Enter for new line)"
+                  className="w-full h-20 bg-vscode-bg border border-vscode-border rounded-sm p-3 text-sm text-vscode-text resize-none focus:border-vscode-accent focus:outline-none"
+                  style={{ fontFamily: 'Consolas, Monaco, monospace' }}
+                  disabled={isProcessing}
+                />
+              </div>
+              <button
+                onClick={handleSubmit}
+                disabled={!input.trim() || isProcessing}
+                className={clsx(
+                  'px-6 rounded-sm text-sm font-medium transition-colors self-end',
+                  input.trim() && !isProcessing
+                    ? 'bg-vscode-accent text-white hover:bg-vscode-accent/80'
+                    : 'bg-vscode-bg-hover text-vscode-text-dim cursor-not-allowed'
+                )}
+              >
+                {isProcessing ? 'Processing...' : 'Send'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
