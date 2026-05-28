@@ -3,7 +3,8 @@
 自研的多智能体 AI 编程助手平台。从零实现 Agent 调度引擎、混合 RAG 检索、认知记忆系统、Prompt 工程化、自我进化及形式化安全验证。
 
 > **23,600+ 行 Python · React + TypeScript 前端 · Docker 沙箱隔离 · 8 种 LLM Provider 统一接入**
->
+
+---
 |------|------|----------|
 | RRF 融合 | 经典 IR |
 | Kuzu 图数据库 | Kuzu Team | 
@@ -15,6 +16,8 @@
 | MAESTRO | Ben Gurion Univ. | 
 | MCP-Cosmos | 
 | Google A2A | Google 2025 |
+
+
 
 ---
 
