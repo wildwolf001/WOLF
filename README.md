@@ -1,6 +1,6 @@
 # WOLF 2.0 — AI Agent 编程平台
 
-自研的多智能体 AI 编程助手平台。从零实现 Agent 调度引擎、混合 RAG 检索、认知记忆系统、Prompt 工程化、自我进化及形式化安全验证。
+多智能体 AI 编程助手平台。从零实现 Agent 调度引擎、混合 RAG 检索、认知记忆系统、Prompt 工程化、自我进化及形式化安全验证。
 
 > **23,600+ 行 Python · React + TypeScript 前端 · Docker 沙箱隔离 · 8 种 LLM Provider 统一接入**
 
