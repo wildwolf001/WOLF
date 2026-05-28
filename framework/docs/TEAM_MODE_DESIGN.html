@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>TEAM_MODE_DESIGN.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> or <div class="page"></div> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="wolf-20-多-agent-协作设计方案-v4">WOLF 2.0 多 Agent 协作设计方案 v4</h1>
+<h2 id="1-设计原则">1. 设计原则</h2>
+<ol>
+<li><strong>编排是结构，不是 prompt</strong> — 不靠 LLM 猜，用确定的规则选模式</li>
+<li><strong>集中式 + 分层</strong> — 一个 Orchestrator 管理一切，五层架构</li>
+<li><strong>Agent 有记忆</strong> — 每个 Agent 从执行中学习，越用越好</li>
+<li><strong>收敛是强制保证</strong> — 不靠运气，超时/死循环/冲突都有硬性兜底</li>
+</ol>
+<h2 id="2-总体架构五层集中式">2. 总体架构：五层集中式</h2>
+<p>取 HAWK 的分层设计，加上集中式编排。</p>
+<pre class="hljs"><code><div>┌─────────────────────────────────────────────────────────────┐
+│ Layer 5: User Layer                                         │
+│   用户输入、反馈、Agent Profile 配置                          │
+├─────────────────────────────────────────────────────────────┤
+│ Layer 4: Workflow Layer                                     │
+│   模式匹配引擎: 根据任务类型选编排模式                          │
+│   Pipeline 定义: 阶段、Agent 角色、Gate 条件                  │
+├─────────────────────────────────────────────────────────────┤
+│ Layer 3: Operation Layer (TeamOrchestrator)                 │
+│   任务分解 → 分配 → 调度 → 结果聚合                           │
+│   所有 Agent 的注册、启动、监控、终止                          │
+│   Blackboard 读写、ConvergenceGuard 检查                     │
+├─────────────────────────────────────────────────────────────┤
+│ Layer 2: Agent Layer                                        │
+│   Agent 实例 = Profile + Memory + LocalAgentTask            │
+│   每个 Agent 独立运行，通过 Blackboard 通信                   │
+├─────────────────────────────────────────────────────────────┤
+│ Layer 1: Resource Layer                                     │
+│   工具 (Bash/Read/Write/...)、Sandbox、Git、Memory Store     │
+└─────────────────────────────────────────────────────────────┘
+</div></code></pre>
+<p>Layer 3 是核心——<strong>所有编排逻辑在这层</strong>。Layer 4 决定&quot;用什么模式&quot;，Layer 3 执行。</p>
+<h2 id="3-编排模式的选择规则">3. 编排模式的选择规则</h2>
+<p><strong>不是 LLM 选，是确定性规则 + 用户覆盖。</strong></p>
+<h3 id="31-任务类型自动匹配">3.1 任务类型自动匹配</h3>
+<pre class="hljs"><code><div>PATTERN_RULES = [
+    <span class="hljs-comment"># (条件, 模式, 说明)</span>
+    (TaskHas(<span class="hljs-string">&quot;implement|build|create|写|实现|开发&quot;</span>), <span class="hljs-string">&quot;maker-checker&quot;</span>,
+     <span class="hljs-string">&quot;代码生成类 → Maker-Checker (生成→审查→修复)&quot;</span>),
+    
+    (TaskHas(<span class="hljs-string">&quot;research|analyze|调查|分析|review|审查&quot;</span>) &amp; IsIndependent(),
+     <span class="hljs-string">&quot;map-reduce&quot;</span>, <span class="hljs-string">&quot;独立分析类 → MapReduce (并行→聚合)&quot;</span>),
+    
+    (TaskHas(<span class="hljs-string">&quot;design|设计|架构&quot;</span>) &amp; NeedsImplementation(),
+     <span class="hljs-string">&quot;sequential&quot;</span>, <span class="hljs-string">&quot;设计+实现 → Sequential (设计→实现→测试)&quot;</span>),
+    
+    (TaskHas(<span class="hljs-string">&quot;security|安全|audit|审计|risk|风险&quot;</span>),
+     <span class="hljs-string">&quot;consensus&quot;</span>, <span class="hljs-string">&quot;高风险评估 → Consensus (多 Agent 投票)&quot;</span>),
+    
+    (ComplexityScore() &gt; <span class="hljs-number">7</span>,
+     <span class="hljs-string">&quot;hierarchical&quot;</span>, <span class="hljs-string">&quot;高复杂度 → Hierarchical (Planner→专业Agent→Reviewer)&quot;</span>),
+    
+    <span class="hljs-comment"># 默认</span>
+    (Always(), <span class="hljs-string">&quot;maker-checker&quot;</span>, <span class="hljs-string">&quot;默认 Maker-Checker&quot;</span>),
+]
+</div></code></pre>
+<p>用户可在 UI 中覆盖：</p>
+<pre class="hljs"><code><div>┌─ Orchestration ───────────────────────────┐
+│  Auto-detected: Maker-Checker             │
+│  Override: [Maker-Checker ▾]             │
+│  Max iterations: [3]                      │
+│  Token budget: [50000]                    │
+└───────────────────────────────────────────┘
+</div></code></pre>
+<h3 id="32-五种模式在-wolf-中的实现">3.2 五种模式在 WOLF 中的实现</h3>
+<h4 id="1-maker-checker默认代码生成首选">(1) Maker-Checker（默认，代码生成首选）</h4>
+<pre class="hljs"><code><div>Round 1:
+  Coder ──生成代码──▶ Reviewer ──审查──▶ 发现问题 × 3
+  Reviewer ──反馈──▶ Coder ──修复──▶ Reviewer ──审查──▶ 通过 ✓
+                                                          │
+Convergence: 最多 3 轮。同一问题出现 2 次 → 升级用户      │
+                                                          ▼
+                                                    Tester 跑测试
+</div></code></pre>
+<p><strong>何时用</strong>: &quot;实现 X&quot;、&quot;写一个 Y&quot;、&quot;修复 Z bug&quot;
+<strong>优势</strong>: 质量保证，迭代收敛
+<strong>成本</strong>: 每轮 2 次 LLM 调用（Coder + Reviewer），最多 3 轮 = 最多 6 次</p>
+<h4 id="2-mapreduce独立分析首选">(2) MapReduce（独立分析首选）</h4>
+<pre class="hljs"><code><div>          ┌─ Researcher-1: 分析 auth.py ─┐
+Orchestrator ─┼─ Researcher-2: 分析 models.py ─┼─▶ Aggregator ──▶ Report
+          └─ Researcher-3: 分析 views.py ─┘
+                 ↑ 并行，互不依赖
+</div></code></pre>
+<p><strong>何时用</strong>: &quot;审查所有 Python 文件&quot;、&quot;分析整个项目的安全漏洞&quot;
+<strong>优势</strong>: 并行，速度 = 最慢的子任务
+<strong>前置条件</strong>: 任务可分解为独立子任务（由 Orchestrator 分解，不是 LLM）</p>
+<h4 id="3-sequential有明确依赖时">(3) Sequential（有明确依赖时）</h4>
+<pre class="hljs"><code><div>Planner ──▶ Coder ──▶ Reviewer ──▶ Tester
+  │            │          │           │
+  设计文档    依赖设计    依赖代码    依赖审查通过
+  Gate: ✓     Gate: ✓    Gate: ✓    Gate: ✓
+</div></code></pre>
+<p><strong>何时用</strong>: &quot;先设计再实现然后测试&quot;——依赖链明确
+<strong>阶段间传递</strong>: 结构化数据（task_list JSON），不是自然语言</p>
+<h4 id="4-consensus高风险决策">(4) Consensus（高风险决策）</h4>
+<pre class="hljs"><code><div>          ┌─ Reviewer-1 (MiniMax): &quot;Line 47: 硬编码密钥 — CRITICAL&quot;
+Task ─────┼─ Reviewer-2 (DeepSeek): &quot;Line 47: 硬编码密钥 — CRITICAL&quot;
+          └─ Reviewer-3 (MiniMax):  &quot;Looks fine, but check line 89&quot;
+
+              ↓ Voting: 2/3 say CRITICAL → accepted as CRITICAL
+</div></code></pre>
+<p><strong>何时用</strong>: &quot;评估这个架构方案&quot;、&quot;判断这个安全漏洞是否真实&quot;
+<strong>投票规则</strong>: 多数决（≥2/3）。1/3 → 升级用户。全票通过 → 自动接受
+<strong>关键</strong>: 必须用不同模型或不同 prompt，保证多样性</p>
+<h4 id="5-hierarchical高复杂度任务">(5) Hierarchical（高复杂度任务）</h4>
+<pre class="hljs"><code><div>                   Planner
+                      │
+            ┌─────────┼─────────┐
+            ▼         ▼         ▼
+         Coder-A   Coder-B   Researcher
+        (后端API)  (前端UI)  (技术调研)
+            │         │         │
+            └─────────┼─────────┘
+                      ▼
+                  Integrator
+                      │
+                      ▼
+                  Reviewer
+</div></code></pre>
+<p><strong>何时用</strong>: 复杂度 &gt; 阈值（文件数 &gt; 10、跨领域 &gt; 2）
+<strong>层级深度</strong>: 最多 2 层（Planner → Workers → Reviewer）</p>
+<h2 id="4-状态管理集中式-blackboard--事件日志">4. 状态管理：集中式 Blackboard + 事件日志</h2>
+<h3 id="41-blackboard-数据结构">4.1 Blackboard 数据结构</h3>
+<pre class="hljs"><code><div><span class="hljs-meta">@dataclass</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">Blackboard</span>:
+    tasks: <span class="hljs-type">Dict</span>[<span class="hljs-built_in">str</span>, TaskState]        <span class="hljs-comment"># task_id → 当前状态</span>
+    ownership: <span class="hljs-type">Dict</span>[<span class="hljs-built_in">str</span>, <span class="hljs-built_in">str</span>]          <span class="hljs-comment"># task_id → agent_id (互斥锁)</span>
+    outputs: <span class="hljs-type">Dict</span>[<span class="hljs-built_in">str</span>, <span class="hljs-type">Any</span>]            <span class="hljs-comment"># task_id → 产出</span>
+    stage: <span class="hljs-built_in">str</span>                         <span class="hljs-comment"># 当前阶段</span>
+    errors: <span class="hljs-type">List</span>[ErrorEntry]           <span class="hljs-comment"># 错误日志</span>
+    token_budget: TokenBudget          <span class="hljs-comment"># 预算追踪</span>
+
+    <span class="hljs-comment"># 每个 key 有历史版本（事件溯源），方便调试</span>
+    history: <span class="hljs-type">Dict</span>[<span class="hljs-built_in">str</span>, <span class="hljs-type">List</span>[Entry]]
+</div></code></pre>
+<h3 id="42-互斥锁保证任务不冲突">4.2 互斥锁保证任务不冲突</h3>
+<pre class="hljs"><code><div><span class="hljs-keyword">class</span> <span class="hljs-title class_">TaskOwnership</span>:
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">acquire</span>(<span class="hljs-params">self, task_id: <span class="hljs-built_in">str</span>, agent_id: <span class="hljs-built_in">str</span></span>) -&gt; <span class="hljs-built_in">bool</span>:
+        <span class="hljs-string">&quot;&quot;&quot;原子操作：检查+锁定&quot;&quot;&quot;</span>
+        <span class="hljs-keyword">if</span> task_id <span class="hljs-keyword">in</span> <span class="hljs-variable language_">self</span>._owners:
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">False</span>
+        <span class="hljs-variable language_">self</span>._owners[task_id] = agent_id
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">True</span>
+    
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">release</span>(<span class="hljs-params">self, task_id: <span class="hljs-built_in">str</span>, agent_id: <span class="hljs-built_in">str</span></span>):
+        <span class="hljs-string">&quot;&quot;&quot;只有 owner 能释放&quot;&quot;&quot;</span>
+        <span class="hljs-keyword">if</span> <span class="hljs-variable language_">self</span>._owners.get(task_id) == agent_id:
+            <span class="hljs-keyword">del</span> <span class="hljs-variable language_">self</span>._owners[task_id]
+</div></code></pre>
+<p>这消除了&quot;两个 agent 抢同一个任务&quot;的问题——不是靠 LLM prompt 约束，是代码强制。</p>
+<h2 id="5-收敛保障">5. 收敛保障</h2>
+<h3 id="51-四层兜底">5.1 四层兜底</h3>
+<pre class="hljs"><code><div>Layer 1: 模式级收敛
+  Maker-Checker: 最多 3 轮
+  Consensus: 最多 3 个 reviewer
+  Hierarchical: 最多 2 层
+
+Layer 2: Agent 级收敛
+  单 Agent 超时: max_seconds (默认 300s)
+  单 Agent 空转: 连续 3 轮无工具调用 → 终止
+  单 Agent 轮次: max_turns (配置在 Profile 中)
+
+Layer 3: 反馈级收敛
+  同一 task 被同一原因 reject &gt; 2 次 → 不再重试 → 升级用户
+  feedback_history 记录每次 reject 的原因摘要
+  hamming_distance &lt; 阈值 → 判定为&quot;相同原因&quot;
+
+Layer 4: 资源级收敛
+  Token 超预算 → 终止当前阶段 → 聚合已有结果
+  并发 Agent 数 &gt; 上限 → 排队
+</div></code></pre>
+<h3 id="52-升级路径">5.2 升级路径</h3>
+<pre class="hljs"><code><div>Agent 内部重试失败 → Orchestrator 收到 ConvergenceError
+  → 尝试降级: 换一个 Agent 或换模型
+  → 降级也失败 → 升级给用户:
+      &quot;Task 'implement auth.py' failed after 3 attempts.
+       Issue: hardcoded secret keeps appearing.
+       Options: [Skip this task] [Give more instructions] [Abort all]&quot;
+</div></code></pre>
+<h2 id="6-agent-自我学习">6. Agent 自我学习</h2>
+<h3 id="61-两阶段学习">6.1 两阶段学习</h3>
+<pre class="hljs"><code><div>Phase 1: 即时学习（单次执行内）
+  同一个 task 被 reject → Agent 收到 reviewer 反馈
+  → 不是重新生成，是带着反馈修正
+  → 反馈写入 Blackboard → Agent 下一轮看到
+
+Phase 2: 长期学习（跨执行）
+  每次 Agent 任务完成 → LLM Extraction 提炼记忆
+  → 写入 agent 专属记忆目录
+  → 下次该 Agent 启动时，注入相关记忆
+</div></code></pre>
+<h3 id="62-记忆结构">6.2 记忆结构</h3>
+<pre class="hljs"><code><div>wolf_data/memory/agents/code-reviewer/
+  feedback/
+    总是检查sql注入.md          ← 用户反复强调的
+    更关注类型安全.md            ← 用户偏好
+  project/
+    fastapi_jwt项目.md          ← 项目上下文
+    auth_py的3个常见问题.md      ← 从执行经验中提取
+  user/
+    安全标准owasp_top10.md      ← 用户标准
+  meta/
+    stats.json                  ← 统计: 执行次数、评分、常见问题
+</div></code></pre>
+<h3 id="63-记忆的使用">6.3 记忆的使用</h3>
+<p>Agent 启动时，system_prompt 构建 = 用户定义的 prompt + 注入的记忆上下文：</p>
+<pre class="hljs"><code><div><span class="hljs-keyword">def</span> <span class="hljs-title function_">build_agent_prompt</span>(<span class="hljs-params">profile: AgentProfile, task: <span class="hljs-built_in">str</span></span>) -&gt; <span class="hljs-built_in">str</span>:
+    parts = [profile.system_prompt]
+    
+    <span class="hljs-comment"># 注入相关记忆（最多 5 条，按相关性排序）</span>
+    memories = profile.get_relevant_memories(task, limit=<span class="hljs-number">5</span>)
+    <span class="hljs-keyword">if</span> memories:
+        parts.append(<span class="hljs-string">&quot;\n## What you&#x27;ve learned from past work&quot;</span>)
+        <span class="hljs-keyword">for</span> m <span class="hljs-keyword">in</span> memories:
+            parts.append(<span class="hljs-string">f&quot;- <span class="hljs-subst">{m.summary}</span>&quot;</span>)
+    
+    <span class="hljs-comment"># 注入当前 Blackboard 状态</span>
+    parts.append(<span class="hljs-string">f&quot;\n## Current state&quot;</span>)
+    parts.append(<span class="hljs-string">f&quot;- Other agents working on: <span class="hljs-subst">{blackboard.active_tasks()}</span>&quot;</span>)
+    parts.append(<span class="hljs-string">f&quot;- Your task: <span class="hljs-subst">{task}</span>&quot;</span>)
+    
+    <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;\n&quot;</span>.join(parts)
+</div></code></pre>
+<h2 id="7-前端设计">7. 前端设计</h2>
+<h3 id="71-agent-工作台档案编辑器">7.1 Agent 工作台（档案编辑器）</h3>
+<pre class="hljs"><code><div>┌─ Agents ────────────────────────┬─ Edit: code-reviewer ──────────────┐
+│                                 │                                     │
+│ [+ New Agent]                   │ Name: [Code Reviewer_____________]  │
+│                                 │ Type: [verification ▾]              │
+│ 📋 Planner        ⭐8.2  5次   │                                     │
+│ 💻 Coder          ⭐7.8 12次   │ System Prompt:                      │
+│ 🔍 Code Reviewer  ⭐9.1 23次   │ ┌────────────────────────────────┐ │
+│ 🧪 Tester         ⭐6.5  3次   │ │ You are a senior code reviewer │ │
+│ 🛡️ Security Audit ⭐8.0  8次   │ │ ...                            │ │
+│                                 │ └────────────────────────────────┘ │
+│ ───────────────────────         │                                     │
+│ Quick Actions:                  │ Tools: ☑Read ☑Grep ☑Glob ☑Bash    │
+│ [▶ Test Run]                    │        ☐Write ☐Edit ☐Agent         │
+│ [📋 Duplicate]                  │                                     │
+│ [🗑️ Delete]                     │ Model: [MiniMax-M2.7 ▾]            │
+│                                 │ Max Turns: [5]  Timeout: [120s]    │
+│                                 │ Sandbox: [auto ▾]                  │
+│                                 │                                     │
+│                                 │ Supported Patterns:                 │
+│                                 │ ☑ Maker-Checker  ☑ Consensus        │
+│                                 │ ☐ MapReduce       ☐ Sequential      │
+│                                 │                                     │
+│                                 │ Learning Memory (23 tasks, ⭐9.1):  │
+│                                 │ 📁 feedback/ (3 files)              │
+│                                 │ 📁 project/  (2 files)              │
+│                                 │ 📁 user/     (1 file)               │
+│                                 │ [📂 Browse] [📊 Stats]              │
+│                                 │                                     │
+│                                 │ [💾 Save] [▶ Test Run]              │
+└─────────────────────────────────┴─────────────────────────────────────┘
+</div></code></pre>
+<h3 id="72-team-run-界面">7.2 Team Run 界面</h3>
+<pre class="hljs"><code><div>┌─ Team Run ──────────────────────────────────────────────────────────┐
+│                                                                      │
+│  Task: [Implement authentication for FastAPI app...]                 │
+│                                                                      │
+│  Pattern: Auto-detected → Maker-Checker  [Override ▾]               │
+│  Agents:  Coder [💻Coder ▾]  Reviewer [🔍Code Reviewer ▾]           │
+│           [+ Add Agent]                                              │
+│                                                                      │
+│  Budget: [50000 tokens ▾]     Max Iterations: [3]                   │
+│                                                                      │
+│  ┌─ Progress ───────────────────────────────────────────────────┐   │
+│  │  Round 1/3 ●○○                                               │   │
+│  │  ┌─ 💻 Coder ─────────────────────────────────────────────┐  │   │
+│  │  │ ✅ Generated auth.py (120 lines)                        │  │   │
+│  │  │ ✅ Generated test_auth.py (45 lines)                    │  │   │
+│  │  │ ✅ 8/8 tests pass                                       │  │   │
+│  │  └────────────────────────────────────────────────────────┘  │   │
+│  │  ┌─ 🔍 Code Reviewer ─────────────────────────────────────┐  │   │
+│  │  │ ❌ Issue 1: Line 47 hardcoded secret [CRITICAL]         │  │   │
+│  │  │ ❌ Issue 2: Missing SQL injection check [WARNING]       │  │   │
+│  │  │ → Sent feedback to Coder                                │  │   │
+│  │  └────────────────────────────────────────────────────────┘  │   │
+│  │                                                               │   │
+│  │  Round 2/3 ●●○                                               │   │
+│  │  ┌─ 💻 Coder ─────────────────────────────────────────────┐  │   │
+│  │  │ ✅ Fixed: secret → env var                              │  │   │
+│  │  │ ✅ Added: SQL injection validation                      │  │   │
+│  │  └────────────────────────────────────────────────────────┘  │   │
+│  │  ┌─ 🔍 Code Reviewer ─────────────────────────────────────┐  │   │
+│  │  │ ✅ All issues resolved                                  │  │   │
+│  │  │ ✅ 10/10 tests pass                                     │  │   │
+│  │  │ → APPROVED ✓                                            │  │   │
+│  │  └────────────────────────────────────────────────────────┘  │   │
+│  │                                                               │   │
+│  │  ✓ Converged in 2 rounds                                     │   │
+│  │  Token: 14,230 / 50,000 | Time: 4min 12s                     │   │
+│  └───────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  ┌─ Input ────────────────────────────────────────────────────────┐  │
+│  │  [Describe your project...                                ]    │  │
+│  │                                                   [▶ Execute]  │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────┘
+</div></code></pre>
+<h2 id="8-后端实现">8. 后端实现</h2>
+<h3 id="81-模块结构">8.1 模块结构</h3>
+<pre class="hljs"><code><div>app/agent_profiles/
+  __init__.py, registry.py, storage.py, routes.py
+  → Agent Profile CRUD + 记忆关联
+
+app/orchestration/
+  __init__.py
+  orchestrator.py    → TeamOrchestrator (Layer 3 核心)
+  patterns.py        → 5 种模式的确定性地实现
+  blackboard.py      → 集中式状态 + 任务互斥
+  convergence.py     → 四层收敛保障
+  matcher.py         → 任务类型 → 模式匹配 (规则引擎)
+</div></code></pre>
+<h3 id="82-核心类关系">8.2 核心类关系</h3>
+<pre class="hljs"><code><div>TeamOrchestrator (单例)
+  ├─ PatternMatcher: 规则匹配选模式
+  ├─ Blackboard: 状态管理 + 互斥锁
+  ├─ ConvergenceGuard: 多层兜底
+  └─ AgentRegistry: Agent Profile 注册表
+        └─ AgentInstance (每次 run 创建):
+              ├─ AgentProfile (静态配置)
+              ├─ AgentMemory (动态学习)
+              └─ LocalAgentTask (复用已有基础设施)
+</div></code></pre>
+<h3 id="83-模式执行器">8.3 模式执行器</h3>
+<pre class="hljs"><code><div><span class="hljs-keyword">class</span> <span class="hljs-title class_">PatternExecutor</span>:
+    <span class="hljs-string">&quot;&quot;&quot;五种模式的确定性地实现 —— 不是 LLM prompt，是代码&quot;&quot;&quot;</span>
+    
+    <span class="hljs-keyword">async</span> <span class="hljs-keyword">def</span> <span class="hljs-title function_">execute_maker_checker</span>(<span class="hljs-params">self, maker, checker, task, board, guard</span>):
+        <span class="hljs-string">&quot;&quot;&quot;Maker-Checker: 生成→验证循环，最多 MAX_RETRIES 轮&quot;&quot;&quot;</span>
+        <span class="hljs-keyword">for</span> round_num <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">1</span>, MAX_RETRIES + <span class="hljs-number">1</span>):
+            <span class="hljs-comment"># Step 1: Maker 生成</span>
+            result = <span class="hljs-keyword">await</span> maker.run(task, board)
+            guard.check_idle(maker.<span class="hljs-built_in">id</span>, result.turns_without_tools)
+            
+            <span class="hljs-comment"># Step 2: Checker 验证</span>
+            review = <span class="hljs-keyword">await</span> checker.run(<span class="hljs-string">f&quot;Review: <span class="hljs-subst">{result.output}</span>&quot;</span>, board)
+            guard.check_idle(checker.<span class="hljs-built_in">id</span>, review.turns_without_tools)
+            
+            <span class="hljs-keyword">if</span> review.approved:
+                <span class="hljs-keyword">return</span> TeamResult(success=<span class="hljs-literal">True</span>, rounds=round_num, output=result.output)
+            
+            <span class="hljs-comment"># Step 3: 检查循环</span>
+            <span class="hljs-keyword">if</span> guard.detect_loop(task.<span class="hljs-built_in">id</span>, review.issues):
+                <span class="hljs-keyword">raise</span> ConvergenceError(<span class="hljs-string">&quot;Same issue detected twice, needs human&quot;</span>)
+            
+            <span class="hljs-comment"># Step 4: 反馈修正</span>
+            task.add_feedback(review.issues)
+        
+        <span class="hljs-keyword">raise</span> MaxRetriesExceeded(<span class="hljs-string">f&quot;Failed after <span class="hljs-subst">{MAX_RETRIES}</span> rounds&quot;</span>)
+    
+    <span class="hljs-keyword">async</span> <span class="hljs-keyword">def</span> <span class="hljs-title function_">execute_map_reduce</span>(<span class="hljs-params">self, researchers, aggregator, task, board, guard</span>):
+        <span class="hljs-string">&quot;&quot;&quot;MapReduce: 并行分解→独立执行→聚合&quot;&quot;&quot;</span>
+        subtasks = task.decompose()  <span class="hljs-comment"># 确定性分解，不是 LLM</span>
+        
+        <span class="hljs-comment"># Map: 并行执行</span>
+        results = <span class="hljs-keyword">await</span> asyncio.gather(*[
+            researcher.run(subtask, board)
+            <span class="hljs-keyword">for</span> researcher, subtask <span class="hljs-keyword">in</span> <span class="hljs-built_in">zip</span>(researchers, subtasks)
+        ])
+        
+        <span class="hljs-comment"># Reduce: 聚合</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">await</span> aggregator.run(results, board)
+    
+    <span class="hljs-comment"># ... Sequential, Consensus, Hierarchical 同理</span>
+</div></code></pre>
+<h3 id="84-收敛检查伪代码">8.4 收敛检查伪代码</h3>
+<pre class="hljs"><code><div><span class="hljs-keyword">class</span> <span class="hljs-title class_">ConvergenceGuard</span>:
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">detect_loop</span>(<span class="hljs-params">self, task_id: <span class="hljs-built_in">str</span>, issues: <span class="hljs-type">List</span>[Issue]</span>) -&gt; <span class="hljs-built_in">bool</span>:
+        <span class="hljs-string">&quot;&quot;&quot;同一问题出现 ≥2 次 → 死循环&quot;&quot;&quot;</span>
+    
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">check_idle</span>(<span class="hljs-params">self, agent_id: <span class="hljs-built_in">str</span>, turns_without_tools: <span class="hljs-built_in">int</span></span>) -&gt; <span class="hljs-built_in">bool</span>:
+        <span class="hljs-string">&quot;&quot;&quot;连续 3 轮没调工具 → 空转&quot;&quot;&quot;</span>
+    
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">check_budget</span>(<span class="hljs-params">self, used: <span class="hljs-built_in">int</span>, limit: <span class="hljs-built_in">int</span></span>) -&gt; <span class="hljs-built_in">bool</span>:
+        <span class="hljs-string">&quot;&quot;&quot;超预算 → 终止当前阶段&quot;&quot;&quot;</span>
+    
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">check_ownership</span>(<span class="hljs-params">self, task_id: <span class="hljs-built_in">str</span>, agent_id: <span class="hljs-built_in">str</span></span>) -&gt; <span class="hljs-built_in">bool</span>:
+        <span class="hljs-string">&quot;&quot;&quot;任务已被别的 agent 认领 → 冲突&quot;&quot;&quot;</span>
+</div></code></pre>
+<h2 id="9-token-预算">9. Token 预算</h2>
+<pre class="hljs"><code><div>总预算 (用户可配，默认 50k):
+  Orchestrator:     固定 10% (调度逻辑不变，开销小)
+  Maker/Worker:     60% (核心工作)
+  Checker/Reviewer: 20% (审查比生成便宜)
+  Aggregator:       10% (汇总开销小)
+  
+  → 每个 Agent 启动前检查剩余预算
+  → 不足时跳过非关键 Agent，降级为简化流程
+</div></code></pre>
+<h2 id="10-实施计划">10. 实施计划</h2>
+<h3 id="phase-1-agent-profile-crud">Phase 1: Agent Profile CRUD</h3>
+<ul>
+<li><code>agent_profiles/</code> 模块</li>
+<li>UI 编辑器</li>
+<li>记忆关联（读写 <code>agents/{id}/</code> 目录）</li>
+</ul>
+<h3 id="phase-2-blackboard--convergenceguard">Phase 2: Blackboard + ConvergenceGuard</h3>
+<ul>
+<li>集中式状态管理</li>
+<li>任务互斥锁</li>
+<li>循环检测 + 空转检测</li>
+</ul>
+<h3 id="phase-3-patternexecutor">Phase 3: PatternExecutor</h3>
+<ul>
+<li>Maker-Checker（默认，最优先实现）</li>
+<li>MapReduce</li>
+<li>Sequential / Consensus / Hierarchical</li>
+</ul>
+<h3 id="phase-4-team-run-ui">Phase 4: Team Run UI</h3>
+<ul>
+<li>Agent 选择 + Pattern 选择</li>
+<li>实时进度展示</li>
+<li>Token 预算显示</li>
+</ul>
+<hr>
+<h2 id="11-与-solo-1n-的共存">11. 与 Solo 1+N 的共存</h2>
+<pre class="hljs"><code><div>Solo 模式（不改）:
+  主 LLM 自由 spawn agent → 灵活但无收敛保证
+
+Team 模式（新增）:
+  确定性的编排引擎 → 有保证但约束更多
+
+用户按需切换。两个模式共享:
+  - Agent Profile 注册表
+  - 工具注册表
+  - Sandbox / Git / Memory
+  - LocalAgentTask 执行体
+</div></code></pre>
+
+</body>
+</html>

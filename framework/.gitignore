@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# WOLF runtime
+temp/
+wolf_data/
+wolfdata/
+*.log
+wolf.db
+
+# Session data
+sessions/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment (contains API keys)
+.env
+
+# Node (frontend)
+node_modules/

@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>TEAM_MODE_ANALYSIS.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> or <div class="page"></div> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="wolf-team-模式当前实现分析">WOLF Team 模式当前实现分析</h1>
+<h2 id="1-发布任务后的完整流程">1. 发布任务后的完整流程</h2>
+<pre class="hljs"><code><div>用户输入 → Frontend TeamRun.tsx
+  │
+  ├─ handleRun() 创建 EventSource
+  │   GET /api/stream/team?task=...&amp;agents=coder,reviewer&amp;pattern=auto&amp;budget=50000
+  │
+  ▼
+Backend routes.py: team_stream()
+  │
+  ├─ 创建 TeamOrchestrator()
+  │
+  ▼
+TeamOrchestrator.run(task, agent_ids, pattern, budget)
+  │
+  ├─ Step 1: 加载 Agent Profiles
+  │     for aid in agent_ids:
+  │       profile = registry.get(aid)   ← 从 team_agents.json 读取
+  │     → agents = {&quot;coder&quot;: AgentProfile, &quot;reviewer&quot;: AgentProfile, ...}
+  │
+  ├─ Step 2: 选编排模式
+  │     if pattern != &quot;auto&quot;:
+  │       mode = pattern          ← 用户指定的
+  │     else:
+  │       mode = matcher.match(task)   ← 规则引擎匹配
+  │     → yield {&quot;type&quot;: &quot;orchestration&quot;, &quot;pattern&quot;: &quot;maker-checker&quot;}
+  │
+  ├─ Step 3: 创建 PatternExecutor(self._run_single_agent)
+  │     ▸ _run_single_agent 是闭包，持有 self = TeamOrchestrator
+  │
+  ├─ Step 4: 执行编排
+  │     PatternExecutor.execute(pattern, agents, task, board, guard)
+  │        │
+  │        ▼ (假设匹配到 maker-checker)
+  │     _maker_checker(agents, task, board, guard)
+  │        │
+  │        ├─ maker  = agents[&quot;coder&quot;]         ← 硬编码 key 查找
+  │        ├─ checker = agents[&quot;reviewer&quot;]     ← 硬编码 key 查找
+  │        │
+  │        ├─ Round 1:
+  │        │   ├─ maker_result = await _run_agent(coder, task, board)
+  │        │   │     │
+  │        │   │     ├─ system_prompt = coder.system_prompt + board.snapshot()
+  │        │   │     ├─ tools = tool_registry.get_tools_for_agent(coder.tools)
+  │        │   │     ├─ llm = LLMService(provider=coder.model or default)
+  │        │   │     ├─ result = await llm.complete(messages, tools, max_tokens=4096)
+  │        │   │     ├─ while tool_calls and turn &lt; max_turns:
+  │        │   │     │    ├─ 执行工具: _execute_tool_call(name, args)
+  │        │   │     │    │     ├─ Bash → subprocess.run(cmd, shell=True)
+  │        │   │     │    │     ├─ Read → open(path).read()
+  │        │   │     │    │     ├─ Write → open(path, 'w').write()
+  │        │   │     │    │     ├─ Glob → glob.glob(pattern)
+  │        │   │     │    │     └─ Grep → return {&quot;matches&quot;: []}  ← 空实现!
+  │        │   │     │    └─ llm.complete(msgs + tool_results, tools)
+  │        │   │     └─ return {&quot;output&quot;: content, &quot;approved&quot;: ...}
+  │        │   │
+  │        │   ├─ checker_result = await _run_agent(checker, &quot;Review: &quot; + maker_output, board)
+  │        │   ├─ if approved → return TeamResult(success=True)
+  │        │   └─ if not approved → task += feedback → Round 2
+  │        │
+  │        └─ Max 3 rounds, then fail
+  │
+  ├─ Step 5: 返回结果
+  │     yield {&quot;type&quot;: &quot;team_complete&quot;, &quot;success&quot;: ..., &quot;output&quot;: ..., ...}
+  │
+  ▼
+Frontend TeamRun.tsx
+  ├─ es.addEventListener(&quot;orchestration&quot;, ...)
+  ├─ es.addEventListener(&quot;team_complete&quot;, ...)
+  └─ 展示结果
+</div></code></pre>
+<hr>
+<h2 id="2-每个子系统的逐项分析">2. 每个子系统的逐项分析</h2>
+<h3 id="21-工具调用">2.1 工具调用</h3>
+<p><strong>现状</strong>：Team 有自己的 <code>TeamToolRegistry</code>，但工具实现是 <code>_execute_tool_call()</code> 里的简略版本。</p>
+<p><strong>具体问题</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bash</td>
+<td><code>shell=True</code> + <code>cwd</code> 指向 Team 模块内部拼出的 temp 路径，路径计算依赖 <code>__file__</code>，可能不对。无 sandbox 支持</td>
+</tr>
+<tr>
+<td>Read</td>
+<td>用相对路径读文件，cwd 未知，大概率读不到</td>
+</tr>
+<tr>
+<td>Write</td>
+<td>默认路径 <code>/tmp/out.txt</code> 在 Windows 上不存在，写文件可能失败</td>
+</tr>
+<tr>
+<td>Grep</td>
+<td><strong>空实现</strong>，永远返回 <code>{&quot;matches&quot;: []}</code></td>
+</tr>
+<tr>
+<td>Glob</td>
+<td>在未知 cwd 下搜索，结果不可预测</td>
+</tr>
+</tbody>
+</table>
+<p><strong>与 Solo 的差距</strong>：Solo 的 Bash/Read/Write 工具经过长期调试，有 working_dir、base_path、sandbox 包装。Team 的工具是重新手写的简化版，缺少所有这些。</p>
+<h3 id="22-任务编排">2.2 任务编排</h3>
+<p><strong>现状</strong>：<code>PatternExecutor</code> 有 5 种模式，但都有严重问题。</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>核心问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>maker-checker</td>
+<td>通过 <code>agents.get(&quot;coder&quot;)</code> 硬编码查找 agent。如果用户选了 id 不为 &quot;coder&quot; 的 agent 当 maker，根本找不到。checker 同理</td>
+</tr>
+<tr>
+<td>sequential</td>
+<td>遍历 <code>list(agents.values())</code>，按字典序执行。用户选 agent 的顺序被忽略。每个 agent 的输出混入下一个 agent 的输入，5 个 agent 后上下文已经是一坨浆糊</td>
+</tr>
+<tr>
+<td>map-reduce</td>
+<td><code>_decompose_task()</code> 用正则按换行/编号拆分任务。如果用户的自然语言描述没有编号 → 拆不出 → 退化为单任务 → 和没拆一样</td>
+</tr>
+<tr>
+<td>consensus</td>
+<td>依赖 <code>review.get(&quot;approved&quot;, False)</code> ，但 agent 返回的 <code>approved</code> 字段是检查输出中是否包含 &quot;CRITICAL&quot; 字符串，完全不靠谱</td>
+</tr>
+<tr>
+<td>hierarchical</td>
+<td>Planner 的输出用 <code>_decompose_task()</code> 拆分，同样是正则拆分，不可靠</td>
+</tr>
+</tbody>
+</table>
+<p><strong>致命缺陷</strong>：所有模式都假设 agent 的 <code>id</code> 符合约定（&quot;coder&quot;、&quot;reviewer&quot;、&quot;planner&quot;）。用户自定义的 agent 除非恰好叫这些名字，否则编排逻辑会崩溃。</p>
+<h3 id="23-每个-agent-的工作方式">2.3 每个 Agent 的工作方式</h3>
+<p><strong>现状</strong>：<code>_run_single_agent()</code> 是一个独立 LLM 调用循环。</p>
+<pre class="hljs"><code><div>Agent 收到任务
+  → 调用 LLM (system_prompt + task)
+  → LLM 可能返回 tool_calls
+  → 执行工具（最多 2 个并行）
+  → 把工具结果送回 LLM
+  → 循环，直到没有 tool_calls 或超过 max_turns
+  → 返回最终文本输出
+</div></code></pre>
+<p><strong>问题</strong>：</p>
+<ol>
+<li>
+<p><strong>Agent 是瞎子</strong> — 它的 system_prompt 只有 <code>profile.system_prompt + board.snapshot()</code>。Board snapshot 只是一行行 <code>✅ [task-id] title</code> 的文本。Agent 看不到其他 agent 的实际输出内容，只知道标题。</p>
+</li>
+<li>
+<p><strong>没有真正的工具链</strong> — 工具执行是同步 subprocess，没有流式输出，没有超时后的 partial result。Agent 调 Bash 跑测试，等 60 秒，然后一次性拿到全部输出。</p>
+</li>
+<li>
+<p><strong><code>approved</code> 判断荒谬</strong> — 返回值是 <code>&quot;CRITICAL&quot; not in output.upper()</code>。这意味着只要输出里不包含大写的 CRITICAL 就算通过。实际 LLM 输出可能包含 &quot;no critical issues found&quot; — 这也算不通过，因为包含了 CRITICAL。</p>
+</li>
+<li>
+<p><strong>单轮 LLM 对话</strong> — Agent 没有上下文记忆。每轮都是一次全新的 LLM 调用，看不到之前轮次的思考过程。</p>
+</li>
+</ol>
+<h3 id="24-记忆系统">2.4 记忆系统</h3>
+<p><strong>现状</strong>：<strong>完全缺失</strong>。</p>
+<p>Agent Profile 有 <code>memory_dir</code> 字段，但从未被写入或读取。设计文档中描述的&quot;Agent 专属记忆&quot;（每次执行后提取经验）没有实现。</p>
+<p>Agent 每次执行都是一张白纸，学不到任何东西。</p>
+<h3 id="25-agent-间通信">2.5 Agent 间通信</h3>
+<p><strong>现状</strong>：仅通过 Blackboard 的文本快照。</p>
+<pre class="hljs"><code><div>通信方式 1: Blackboard.snapshot()
+  → 生成文本 &quot;## Team Blackboard Snapshot\n✅ [task-1] Implement auth\n🔄 [task-2] Write tests&quot;
+  → 注入每个 agent 的 system_prompt
+  
+通信方式 2: 模式内的数据传递
+  → maker-checker: checker 收到 &quot;Review this output: {maker_output[:2000]}&quot;
+  → sequential: 下一个 agent 收到 &quot;Previous output:\n{prev[:2000]}\n\nContinue with: {task}&quot;
+  → hierarchical: reviewer 收到 &quot;Integrate and review:\n{combined}&quot;
+</div></code></pre>
+<p><strong>问题</strong>：</p>
+<ol>
+<li>Blackboard 快照只有标题和状态，Agent 看不到其他 Agent 的<strong>实际产出</strong></li>
+<li>输出截断到 2000 字符，复杂输出被腰斩</li>
+<li>没有结构化的 Agent 间消息。Agent A 想对 Agent B 说&quot;你那个 auth.py 第 47 行有问题&quot; — 没有这个能力</li>
+<li>Blackboard 没有事件通知机制。Agent A 完成了，Agent B 不知道，只能等编排器调度</li>
+</ol>
+<hr>
+<h2 id="3-异常处理">3. 异常处理</h2>
+<p><strong>现状</strong>：有多层 try/except，但每一层都是吃掉异常继续。</p>
+<pre class="hljs"><code><div><span class="hljs-comment"># orchestrator.py:142</span>
+<span class="hljs-keyword">except</span> Exception <span class="hljs-keyword">as</span> e:
+    <span class="hljs-keyword">return</span> {<span class="hljs-string">&quot;output&quot;</span>: <span class="hljs-string">f&quot;[Agent error: <span class="hljs-subst">{e}</span>]&quot;</span>, <span class="hljs-string">&quot;approved&quot;</span>: <span class="hljs-literal">False</span>}
+
+<span class="hljs-comment"># orchestrator.py:173</span>
+<span class="hljs-keyword">except</span> Exception:
+    <span class="hljs-keyword">break</span>  <span class="hljs-comment"># 静默退出工具循环</span>
+
+<span class="hljs-comment"># orchestrator.py:118</span>
+<span class="hljs-keyword">except</span> Exception <span class="hljs-keyword">as</span> e:
+    <span class="hljs-keyword">yield</span> {<span class="hljs-string">&quot;type&quot;</span>: <span class="hljs-string">&quot;team_complete&quot;</span>, <span class="hljs-string">&quot;success&quot;</span>: <span class="hljs-literal">False</span>, <span class="hljs-string">&quot;errors&quot;</span>: [<span class="hljs-built_in">str</span>(e)]}
+</div></code></pre>
+<p><strong>问题</strong>：</p>
+<ol>
+<li>第一层：Agent LLM 调用失败 → 返回错误字符串冒充输出 → 后续 agent 把这个当正常输出处理</li>
+<li>第二层：工具调用失败 → 静默 break → Agent 返回半成品</li>
+<li>第三层：编排器异常 → 仅返回错误信息 → 前端显示 &quot;Team Failed&quot; 但没有诊断信息</li>
+</ol>
+<p><strong>缺失的异常处理</strong>：</p>
+<ul>
+<li>没有 propagation（编排器不知道 agent 内部发生了什么）</li>
+<li>没有降级策略（agent A 失败 → 换 agent B 重试 → 不需要）</li>
+<li>没有 partial result（失败了连已完成的输出都丢了）</li>
+<li>没有日志（异常在 <code>except</code> 中消失，没有记录到 log）</li>
+</ul>
+<hr>
+<h2 id="4-收敛保障">4. 收敛保障</h2>
+<p><strong>现状</strong>：<code>ConvergenceGuard</code> 定义了四层兜底，但实际调用不完整。</p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>定义</th>
+<th>实际调用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Layer 1: 模式级</td>
+<td><code>check_retries()</code> + <code>record_retry()</code></td>
+<td>maker-checker 调了 <code>record_retry</code>，但 <code>check_retries</code> 从未被检查</td>
+</tr>
+<tr>
+<td>Layer 2: Agent 级</td>
+<td><code>check_idle()</code></td>
+<td><strong>从未被调用</strong></td>
+</tr>
+<tr>
+<td>Layer 3: 反馈级</td>
+<td><code>detect_loop()</code></td>
+<td>maker-checker 调了，其他模式没调</td>
+</tr>
+<tr>
+<td>Layer 4: 资源级</td>
+<td><code>check_budget()</code></td>
+<td><strong>从未被调用</strong></td>
+</tr>
+</tbody>
+</table>
+<p>预算设置了 <code>50000</code>，但执行过程中没有任何地方检查剩余预算。Agent 可以无限制烧 token。</p>
+<hr>
+<h2 id="5-评测打分">5. 评测打分</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>分数</th>
+<th>评语</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>工具调用</td>
+<td>⭐⭐</td>
+<td>6 个工具有 5 个有严重实现问题</td>
+</tr>
+<tr>
+<td>任务编排</td>
+<td>⭐⭐</td>
+<td>5 种模式都依赖硬编码 agent id，通用性为零</td>
+</tr>
+<tr>
+<td>Agent 执行</td>
+<td>⭐⭐⭐</td>
+<td>基本 LLM 调用链可用，但 approved 判断可笑</td>
+</tr>
+<tr>
+<td>记忆系统</td>
+<td>⭐</td>
+<td>字段存在，代码零实现</td>
+</tr>
+<tr>
+<td>Agent 通信</td>
+<td>⭐⭐</td>
+<td>仅文本快照，截断 2000 字符，无事件通知</td>
+</tr>
+<tr>
+<td>异常处理</td>
+<td>⭐⭐</td>
+<td>有 try/except 但吃掉所有异常无日志</td>
+</tr>
+<tr>
+<td>收敛保障</td>
+<td>⭐</td>
+<td>定义四层，实际上只用了半层</td>
+</tr>
+<tr>
+<td>Token 预算</td>
+<td>⭐</td>
+<td>设置了但从未检查</td>
+</tr>
+<tr>
+<td>综合</td>
+<td>⭐⭐</td>
+<td>骨架完整，细节全缺，不可用于生产</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="6-改进路径">6. 改进路径</h2>
+<h3 id="优先级排序">优先级排序</h3>
+<p><strong>P0 — 让 Agent 能正确执行（1-2 天）</strong></p>
+<ul>
+<li>修 <code>_execute_tool_call()</code>：正确的 cwd，Grep 真实实现，Write 用项目路径</li>
+<li>修 <code>approved</code> 判断：LLM 显式输出 <code>{&quot;approved&quot;: true/false, &quot;issues&quot;: [...]}</code> JSON</li>
+<li>修模式匹配：不硬编码 agent id，改用 <code>agent_type</code> 字段匹配角色</li>
+</ul>
+<p><strong>P1 — 让编排真正工作（2-3 天）</strong></p>
+<ul>
+<li>实现真正的预算检查（每次 LLM 调用后扣减）</li>
+<li>让 <code>ConvergenceGuard</code> 全部生效</li>
+<li>加 partial result 返回</li>
+</ul>
+<p><strong>P2 — 让 Agent 之间有意义的通信（3-5 天）</strong></p>
+<ul>
+<li><code>_run_single_agent</code> 不返回到编排器再分发，而是通过 Blackboard 发布/订阅</li>
+<li>Agent 完成 → 写 Blackboard → 其他 Agent 的 system prompt 自动包含</li>
+<li>Blackboard 加事件通知 → 依赖满足后自动触发下游 Agent</li>
+</ul>
+<p><strong>P3 — Agent 记忆（5-7 天）</strong></p>
+<ul>
+<li>每次 Agent 执行后调用 LLM extraction</li>
+<li>写入 Agent 专属记忆目录</li>
+<li>下次启动注入</li>
+</ul>
+
+</body>
+</html>
