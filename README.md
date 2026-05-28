@@ -129,8 +129,6 @@ WOLF2.0/
 │       ├── hooks/              # useAgent, useChat, useTask, useWebSocket
 │       ├── services/           # API Service 层
 │       └── store/              # Zustand 状态管理
-│
-└── AI学习路线与前沿方向报告.md
 ```
 
 ---
@@ -146,9 +144,7 @@ WOLF2.0/
 
 ### 1. 后端启动
 
-```bash
-cd wolf_b2
-
+```
 # 创建虚拟环境
 python -m venv venv
 # Windows: venv\Scripts\activate
@@ -167,20 +163,17 @@ python -m app.main
 
 ### 2. 前端启动
 
-```bash
-cd wolf_f
-
+```
 npm install
 npm run dev
-# 开发服务器运行在 http://localhost:5173
+# 开发服务器运行在 http://localhost:5173（4000）
 ```
 
 ### 3. Docker 部署
 
 ```bash
-cd wolf_b2
 docker build -t wolf-backend .
-docker run -p 8000:8000 wolf-backend
+docker run -p 8080:8080 wolf-backend
 ```
 
 ---
