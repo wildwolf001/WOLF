@@ -5,7 +5,8 @@
 > **23,600+ 行 Python · React + TypeScript 前端 · Docker 沙箱隔离 · 8 种 LLM Provider 统一接入**
 
 ---
-|------|------|----------|
+
+```
 | RRF 融合 | 经典 IR |
 | Kuzu 图数据库 | Kuzu Team | 
 | ZenBrain 7-Layer Memory | 
@@ -16,7 +17,7 @@
 | MAESTRO | Ben Gurion Univ. | 
 | MCP-Cosmos | 
 | Google A2A | Google 2025 |
-
+```
 
 
 ---
