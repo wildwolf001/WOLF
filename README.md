@@ -6,6 +6,22 @@
 
 ---
 
+```
+| RRF 融合 | 经典 IR |
+| Kuzu 图数据库 | Kuzu Team | 
+| ZenBrain 7-Layer Memory | 
+| Ebbinghaus 遗忘曲线 | 
+| AGP 自进化协议 | 
+| SkillOpt TextualLR | Microsoft 2026 |
+| Agent Skills 标准 |
+| MAESTRO | Ben Gurion Univ. | 
+| MCP-Cosmos | 
+| Google A2A | Google 2025 |
+```
+
+
+---
+
 ## 架构概览
 
 ```
@@ -186,20 +202,6 @@ docker run -p 8000:8000 wolf-backend
 
 ---
 
-## 涉及的前沿技术
-
-| 技术 | 来源 | 应用模块 |
-|------|------|----------|
-| RRF 融合 | 经典 IR | `vector_store/hybrid_retriever.py` |
-| Kuzu 图数据库 | Kuzu Team | `vector_store/kg_builder.py` |
-| ZenBrain 7-Layer Memory | arXiv:2604.23878 | `memory/cognitive.py` |
-| Ebbinghaus 遗忘曲线 | H. Ebbinghaus 1885 | `memory/cognitive.py` |
-| AGP 自进化协议 | Stanford (arXiv:2604.15034) | `evolution/` |
-| SkillOpt TextualLR | Microsoft 2026 | `evolution/skill_optimizer.py` |
-| Agent Skills 标准 | Anthropic (agentskills.io) | `skills/` |
-| MAESTRO | Ben Gurion Univ. | `middleware/injection_guard.py` |
-| MCP-Cosmos | IBM (arXiv:2605.09131) | `tools/predictive_executor.py` |
-| Google A2A | Google 2025 | `mcp/a2a_bridge.py` |
 
 ---
 
